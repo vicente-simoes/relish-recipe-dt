@@ -1,0 +1,92 @@
+[
+  {
+    "id": "01-carbonara",
+    "dishId": "6aa3f51552d99764d0847430",
+    "dish": "carbonara",
+    "url": "https://www.youtube.com/shorts/zMUNG9KXmrE",
+    "language": "en",
+    "category": "short",
+    "notes": "Narrated, multiple cooking stages, captions, no exact quantities"
+  },
+  {
+    "id": "02-cookies",
+    "dishId": "6aa4054752d99764d0847433",
+    "dish": "chocolate chip cookies",
+    "url": "https://www.youtube.com/shorts/jWZ-NQOu6gQ",
+    "language": "en",
+    "category": "short",
+    "notes": "On screen quantities and baking instructions, captions"
+  },
+  {
+    "id": "03-guacamole",
+    "dishId": "6aa4051d52d99764d0847432",
+    "dish": "classic guacamole",
+    "url": "https://www.youtube.com/shorts/iOZk8j4fp7U",
+    "language": "en",
+    "category": "short",
+    "notes": "No captions, no quantities, no exact steps or ingredients, the only way to get it right is to follow what is done in the video visually"
+  },
+  {
+    "id": "04-risotto",
+    "dishId": "6aab096263dfc2d3bd201e16",
+    "dish": "risotto",
+    "url": "https://www.youtube.com/watch?v=NKtR3KpS83w",
+    "language": "en",
+    "category": "medium",
+    "notes": "No captions, no exact quantities, just ingredients name on screen, lots of talking outside of just the steps"
+  },
+  {
+    "id": "05-tortilla",
+    "dishId": "6aab098763dfc2d3bd201e17",
+    "dish": "tortilla española",
+    "url": "https://www.youtube.com/watch?v=pvlkYYdIBV0",
+    "language": "es",
+    "category": "medium",
+    "notes": "No captions, ingredients and quantities on screen, different languages"
+  },
+  {
+    "id": "06-focaccia",
+    "dishId": "6aab099463dfc2d3bd201e18",
+    "dish": "focaccia",
+    "url": "https://www.youtube.com/watch?v=-DmVedGWAnU",
+    "language": "en",
+    "category": "long",
+    "notes": "No captions, longer with lots of talking"
+  },
+  {
+    "id": "07-lasagna",
+    "dishId": "6aab09a863dfc2d3bd201e19",
+    "dish": "lasagna",
+    "url": "https://www.youtube.com/watch?v=GK7GObLUCWU",
+    "language": "en",
+    "category": "medium",
+    "notes": "No captions, longer with lots of talking, many separate preparations"
+  },
+  {
+    "id": "08-schnitzel",
+    "dishId": "6aab09b763dfc2d3bd201e1a",
+    "dish": "schnitzel",
+    "url": "https://www.youtube.com/shorts/fwJKtTWdvpQ",
+    "language": "en",
+    "category": "short",
+    "notes": "No captions, no narration, only visuals"
+  },
+  {
+    "id": "09-crepe",
+    "dishId": "6aab09c263dfc2d3bd201e1b",
+    "dish": "crepe",
+    "url": "https://www.youtube.com/shorts/o89Cmd99ujc",
+    "language": "fr",
+    "category": "short",
+    "notes": "Different lanugage, ingredients and quantities on screen"
+  },
+  {
+    "id": "10-stew",
+    "dishId": "6aab09cb63dfc2d3bd201e1c",
+    "dish": "pot beef stew",
+    "url": "https://www.youtube.com/watch?v=NLXYJZBR_HU",
+    "language": "en",
+    "category": "long",
+    "notes":  "Ingredients and quantities on screen, lots of information, lots of steps"
+  }
+]

@@ -1,0 +1,296 @@
+{
+  "ingredients": [
+    {
+      "ingredientOrDishId": "6aabb7b0956caeee2b49f5f1",
+      "quantity": 2,
+      "unit": "cup"
+    },
+    {
+      "ingredientOrDishId": "6aabb7b6956caeee2b49f5f3",
+      "quantity": 4,
+      "unit": "cups"
+    },
+    {
+      "ingredientOrDishId": "6aabb7bc956caeee2b49f5f5",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb7c3956caeee2b49f5f7",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb2e1956caeee2b49f5bd",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb7ca956caeee2b49f5fa",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb7d0956caeee2b49f5fc",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aa406d26d0b3ce1040d06bc",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb7d7956caeee2b49f5ff",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb7dd956caeee2b49f601",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aa3f6336d0b3ce1040d0659",
+      "quantity": null,
+      "unit": null
+    }
+  ],
+  "tools": [
+    {
+      "tool": "6aabb7e5956caeee2b49f604",
+      "alternatives": [
+        "6aabb7e5956caeee2b49f604"
+      ]
+    },
+    {
+      "tool": "6aa3f6936d0b3ce1040d067a",
+      "alternatives": [
+        "6aa3f6936d0b3ce1040d067a"
+      ]
+    },
+    {
+      "tool": "6aa3f6c86d0b3ce1040d068b",
+      "alternatives": []
+    },
+    {
+      "tool": "6aa3f6ba6d0b3ce1040d0686",
+      "alternatives": []
+    },
+    {
+      "tool": "6aa3f6c36d0b3ce1040d0689",
+      "alternatives": []
+    }
+  ],
+  "steps": [
+    {
+      "description": "Prepare your ingredients and tools.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7b0956caeee2b49f5f1",
+          "quantity": 1,
+          "unit": "cup"
+        },
+        {
+          "ingredientOrDishId": "6aabb7b6956caeee2b49f5f3",
+          "quantity": 4,
+          "unit": "cups"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aabb7e5956caeee2b49f604",
+          "alternatives": [
+            "6aabb7e5956caeee2b49f604"
+          ]
+        },
+        {
+          "tool": "6aa3f6936d0b3ce1040d067a",
+          "alternatives": [
+            "6aa3f6936d0b3ce1040d067a"
+          ]
+        },
+        {
+          "tool": "6aa3f6c86d0b3ce1040d068b",
+          "alternatives": []
+        },
+        {
+          "tool": "6aa3f6ba6d0b3ce1040d0686",
+          "alternatives": []
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Bring the chicken stock to a rolling boil.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Reduce the heat to a gentle simmer after boiling.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add oil to the pot and heat it up.",
+      "ingredients": [],
+      "tools": [
+        {
+          "tool": "6aa3f6936d0b3ce1040d067a",
+          "alternatives": [
+            "6aa3f6936d0b3ce1040d067a"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Sauté shallots in the hot oil until they are translucent.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7bc956caeee2b49f5f5",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add sliced mushrooms and butter, and stir until the mushrooms are soft and tender.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7c3956caeee2b49f5f7",
+          "quantity": null,
+          "unit": null
+        },
+        {
+          "ingredientOrDishId": "6aabb2e1956caeee2b49f5bd",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add minced garlic, fresh thyme, salt, and pepper to the pot.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7ca956caeee2b49f5fa",
+          "quantity": null,
+          "unit": null
+        },
+        {
+          "ingredientOrDishId": "6aabb7d0956caeee2b49f5fc",
+          "quantity": null,
+          "unit": null
+        },
+        {
+          "ingredientOrDishId": "6aa406d26d0b3ce1040d06bc",
+          "quantity": null,
+          "unit": null
+        },
+        {
+          "ingredientOrDishId": "6aabb7d7956caeee2b49f5ff",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Pour the Arborio rice into the mixture and stir to coat every grain.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7b0956caeee2b49f5f1",
+          "quantity": 1,
+          "unit": "cup"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6ba6d0b3ce1040d0686",
+          "alternatives": []
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Toast the rice gently for 1-2 minutes without burning it.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add a splash of white wine and allow it to cook off.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7dd956caeee2b49f601",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Ladle hot chicken stock into the pot, just to cover the rice, and stir constantly until absorbed.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb7b6956caeee2b49f5f3",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6c36d0b3ce1040d0689",
+          "alternatives": []
+        },
+        {
+          "tool": "6aa3f6936d0b3ce1040d067a",
+          "alternatives": []
+        },
+        {
+          "tool": "6aa3f6ba6d0b3ce1040d0686",
+          "alternatives": []
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Continue to add stock slowly, stirring consistently for 15-20 minutes until creamy.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Finish with grated Parmesan cheese, stirring it in for added creaminess and flavor.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f6336d0b3ce1040d0659",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    }
+  ],
+  "media": [],
+  "location": null,
+  "id": "6aabb7ef956caeee2b49f60c",
+  "dishId": "6aab096263dfc2d3bd201e16",
+  "totalPrepSeconds": null,
+  "sourceId": "6aabb16c956caeee2b49f543",
+  "index": 0,
+  "modelConfidence": 0.95,
+  "plainTextDescription": "The video opens with an inviting close-up of a plate of finished risotto, its surface creamy and speckled with garnished herbs and a snowfall of grated cheese. The narrator’s voice, supported by lively music, welcomes viewers to the world of risotto—a beloved but often intimidating dish. The tone is reassuring and approachable, promising to demystify the process and break down the essential steps to making risotto “absolutely perfect.”\n\nThe video transitions to the basic ingredient: Arborio rice. Visually, viewers see gleaming uncooked Arborio grains as the narration explains that this short-grain variety is prized for its high starch content, which results in the risotto’s signature creaminess. The narrator mentions alternatives such as long-grain rice, farro, or barley, but recommends Arborio as the best choice for authenticity and texture. Graphics reinforce these points, with text overlays calling out “ARBORIO” and “OTHER GRAINS: long grain, farro.”\n\nA top-down view shows a person placing a pot on a portable stovetop, ready to begin the cooking process. Measuring cups, bowls of rice, and a pot filled with chicken stock are briefly displayed alongside a graphic about ratios. The narrator offers a practical tip: for every cup of rice, use four to six cups of stock. This stock can be chicken, vegetable, or even hot water in a pinch, but the key is to keep it hot. The importance of this is underscored as a hand brings a pot of broth to a rolling boil, accompanied by a graphic “BRING TO A BOIL.” The narrator cautions that adding cold stock will prevent the rice from cooking evenly and stop it from reaching that coveted creamy consistency.\n\nOnce the stock is boiling, the heat is reduced to a gentle simmer. The video highlights the importance of using a tall, roomy pot since the rice will double in size as the broth is absorbed, and a too-small pot risks overflow. A hand points to the bottom of a pot while on-screen advice reminds viewers, “make sure to use a tall [pot].”\n\nThe risotto pot is brought to medium heat on the stove, and oil is poured in. The cooking then begins with the chosen allium—shown visually by small bowls containing onions, scallions, garlic, and shallots, all labeled for clarity. The narrator notes that any allium will work, depending on personal preference, but this recipe uses shallots, which are added to the hot oil in the pot. The shallots are sautéed until they grow translucent, releasing their aroma.\n\nAt this stage, sliced mushrooms and a generous dollop of butter are added to the pot, as shown in a close-up shot labeled “MUSHROOMS BUTTER.” The ingredients are stirred with a wooden spoon. The mushrooms are left to cook down until they become soft and tender—a process that requires a bit of patience, as the narrator emphasizes, establishing patience as a recurring theme in risotto-making. For viewers who dislike mushrooms, the tip is given to simply skip them and proceed to the next step.\n\nOnce the mushrooms have softened, minced garlic, fresh thyme, salt, and pepper are sprinkled in. There’s room for creativity here, and the narrator encourages viewers to experiment with their preferred seasonings to customize the flavor profile.\n\nNow comes the rice itself, poured into the fragrant mixture of mushrooms, shallots, and herbs. The narrator instructs viewers to stir the rice thoroughly—coating every grain with the mushroom mixture and oil. Care is taken to toast the rice gently for about one to two minutes, imparting complexity while ensuring the rice doesn’t burn. Close-ups show the wooden spoon stirring lustrous grains among mushrooms.\n\nA splash of white wine is added next, with visuals displaying a measuring cup labeled “WHITE WINE” being poured into the pot. This step injects a delicate acidity, working as a flavor enhancer. Those avoiding alcohol can substitute lemon juice. It’s important to allow the wine to cook off fully; a cue for moving on is when the liquid evaporates, leaving just the aroma behind.\n\nThe process now enters its most essential, hands-on stage. A hand is seen ladling hot chicken stock, labeled “CHICKEN STOCK,” into the pot with the rice and mushrooms. The narrator’s voice is soothing and patient, underscoring that risotto is about technique and time—not shortcuts. Small amounts of stock are added just to cover the rice, and the mixture is stirred constantly, gently, as each ladleful is absorbed. Visually, steam rises from the pot as the message “PATIENCE REALLY IS A VIRTUE” appears on-screen.\n\nGradually, as more stock is added bit by bit, the rice swells and the mixture gains body, developing the creamy texture revered in a proper risotto. The video warns against rushing—adding too much stock at once will result in a soupy, uneven dish and rob the rice of its luxurious texture. The narrator recommends 15 to 20 minutes of careful stock addition, constant stirring, and patient attention.\n\nThe sign of perfection comes when you pull a spoon through the risotto, and it slowly oozes back to fill the space—a hallmark of the creamy, al dente finish. The video provides this cue visually, with the risotto’s gentle flow revealed in a close-up. For finishing touches, grated Parmesan is sprinkled over the top and stirred in, enhancing both the creaminess and flavor.\n\nThe camera lingers on a serving fork picking up the mixture, showcasing the final texture. Throughout, the video makes room for encouragement; risotto, it insists, is not as complicated as it seems. There are infinite ways to experiment and customize—so long as you respect the basic methods: use the right rice, keep your stock hot, and stir with patience.\n\nThe closing moments are playful, with a cook expressing affection for rice (“my favorite thing in the world and risotto is just like fancy rice”), underscoring both the approachability and specialness of the dish. Graphics and upbeat music wrap up the tutorial, inviting viewers to try it themselves, equipped with all the guidance and know-how needed to become a risotto master.\n\nThroughout the video, key cooking information is clearly presented: types and ratios of ingredients, temperatures (hot stock, simmering pot), time (15-20 minutes), choice and treatment of tools (tall pot, wooden spoon, ladle), and important sensory cues (translucent shallots, creamy flow, al dente bite). The visuals and narration unite to make the method approachable, demystifying risotto with clarity, warmth, and an evident love of good food.",
+  "language": "en",
+  "createdAt": "2026-09-17T09:50:39.992Z",
+  "updatedAt": "2026-09-17T09:50:39.992Z"
+}

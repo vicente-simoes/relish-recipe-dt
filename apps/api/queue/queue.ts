@@ -74,7 +74,7 @@ const jobIdFor = (data: TaskParameters): string => {
     case "processDish":
       return `processDish_${data.dishId}`
     case "processDishFromSource":
-      return `processDishFromSource_${data.dishId}_${data.adapter}_${data.sourceUrl}`
+      return `processDishFromSource_${data.dishId}_${data.adapter}_${encodeURIComponent(data.sourceUrl)}`
     default: {
       const _exhaustive: never = data
       throw new Error(`Unexpected task type: ${JSON.stringify(_exhaustive)}`)

@@ -1,0 +1,310 @@
+{
+  "ingredients": [
+    {
+      "ingredientOrDishId": "6aa3f62c6d0b3ce1040d0657",
+      "quantity": 900,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa3f6336d0b3ce1040d0659",
+      "quantity": 100,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa3f6386d0b3ce1040d065b",
+      "quantity": 3,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aa3f63f6d0b3ce1040d065d",
+      "quantity": 400,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa3f6476d0b3ce1040d065f",
+      "quantity": 400,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa3f64e6d0b3ce1040d0661",
+      "quantity": 1,
+      "unit": "bowl"
+    },
+    {
+      "ingredientOrDishId": "6aa3f6536d0b3ce1040d0663",
+      "quantity": 1,
+      "unit": "cup"
+    },
+    {
+      "ingredientOrDishId": "6aa3f6596d0b3ce1040d0665",
+      "quantity": 1,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa3f65f6d0b3ce1040d0667",
+      "quantity": 50,
+      "unit": "grams"
+    }
+  ],
+  "tools": [
+    {
+      "tool": "6aa3f6606d0b3ce1040d0669",
+      "alternatives": [
+        "6aa3f6636d0b3ce1040d066b",
+        "6aa3f6686d0b3ce1040d066d"
+      ]
+    },
+    {
+      "tool": "6aa3f66f6d0b3ce1040d066f",
+      "alternatives": [
+        "6aa3f6746d0b3ce1040d0671",
+        "6aa3f66f6d0b3ce1040d066f"
+      ]
+    },
+    {
+      "tool": "6aa3f67f6d0b3ce1040d0674",
+      "alternatives": [
+        "6aa3f6866d0b3ce1040d0676",
+        "6aa3f68c6d0b3ce1040d0678"
+      ]
+    },
+    {
+      "tool": "6aa3f6936d0b3ce1040d067a",
+      "alternatives": [
+        "6aa3f6996d0b3ce1040d067c",
+        "6aa3f6936d0b3ce1040d067a"
+      ]
+    },
+    {
+      "tool": "6aa3f6996d0b3ce1040d067c",
+      "alternatives": [
+        "6aa3f6996d0b3ce1040d067c",
+        "6aa3f6a56d0b3ce1040d0680"
+      ]
+    },
+    {
+      "tool": "6aa3f6ae6d0b3ce1040d0682",
+      "alternatives": [
+        "6aa3f6b46d0b3ce1040d0684",
+        "6aa3f6ba6d0b3ce1040d0686",
+        "6aa3f67f6d0b3ce1040d0674"
+      ]
+    },
+    {
+      "tool": "6aa3f6c36d0b3ce1040d0689",
+      "alternatives": [
+        "6aa3f6c86d0b3ce1040d068b",
+        "6aa3f6cd6d0b3ce1040d068d"
+      ]
+    },
+    {
+      "tool": "6aa3f6d36d0b3ce1040d068f",
+      "alternatives": [
+        "6aa3f6d96d0b3ce1040d0691"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "description": "Slice the guanciale into thin strips and dice it into small to medium-sized pieces.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f62c6d0b3ce1040d0657",
+          "quantity": 300,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6606d0b3ce1040d0669",
+          "alternatives": [
+            "6aa3f6636d0b3ce1040d066b",
+            "6aa3f6686d0b3ce1040d066d"
+          ]
+        }
+      ],
+      "prepSeconds": 300
+    },
+    {
+      "description": "Grate pecorino romano or parmesan cheese into a bowl.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f6336d0b3ce1040d0659",
+          "quantity": 100,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f66f6d0b3ce1040d066f",
+          "alternatives": [
+            "6aa3f6746d0b3ce1040d0671",
+            "6aa3f66f6d0b3ce1040d066f"
+          ]
+        }
+      ],
+      "prepSeconds": 120
+    },
+    {
+      "description": "Add egg yolks to the grated cheese and whisk until combined.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f6386d0b3ce1040d065b",
+          "quantity": 3,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f67f6d0b3ce1040d0674",
+          "alternatives": [
+            "6aa3f6866d0b3ce1040d0676",
+            "6aa3f68c6d0b3ce1040d0678"
+          ]
+        }
+      ],
+      "prepSeconds": 180
+    },
+    {
+      "description": "Cook spaghetti in boiling water according to package instructions.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f63f6d0b3ce1040d065d",
+          "quantity": 400,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6936d0b3ce1040d067a",
+          "alternatives": [
+            "6aa3f6996d0b3ce1040d067c",
+            "6aa3f6936d0b3ce1040d067a"
+          ]
+        }
+      ],
+      "prepSeconds": 600
+    },
+    {
+      "description": "Add diced guanciale to a cold pan, then cook over medium heat for 4-5 minutes until golden and fat has rendered.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f62c6d0b3ce1040d0657",
+          "quantity": 300,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6996d0b3ce1040d067c",
+          "alternatives": [
+            "6aa3f6996d0b3ce1040d067c",
+            "6aa3f6a56d0b3ce1040d0680"
+          ]
+        }
+      ],
+      "prepSeconds": 300
+    },
+    {
+      "description": "Transfer cooked pasta to the pan with guanciale, mixing thoroughly to coat in the fat.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f6476d0b3ce1040d065f",
+          "quantity": 400,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6aa3f62c6d0b3ce1040d0657",
+          "quantity": 300,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6ae6d0b3ce1040d0682",
+          "alternatives": [
+            "6aa3f6b46d0b3ce1040d0684",
+            "6aa3f6ba6d0b3ce1040d0686"
+          ]
+        }
+      ],
+      "prepSeconds": 120
+    },
+    {
+      "description": "Pour in the egg and cheese mixture, mixing quickly to prevent scrambling.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f64e6d0b3ce1040d0661",
+          "quantity": 1,
+          "unit": "bowl"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6ae6d0b3ce1040d0682",
+          "alternatives": [
+            "6aa3f6ba6d0b3ce1040d0686",
+            "6aa3f67f6d0b3ce1040d0674"
+          ]
+        }
+      ],
+      "prepSeconds": 60
+    },
+    {
+      "description": "Add reserved pasta water gradually until the sauce reaches desired consistency, stirring continuously.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f6536d0b3ce1040d0663",
+          "quantity": 1,
+          "unit": "cup"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6c36d0b3ce1040d0689",
+          "alternatives": [
+            "6aa3f6c86d0b3ce1040d068b",
+            "6aa3f6cd6d0b3ce1040d068d"
+          ]
+        }
+      ],
+      "prepSeconds": 120
+    },
+    {
+      "description": "Serve the pasta in bowls, topping with grated cheese and cracked black pepper.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa3f6596d0b3ce1040d0665",
+          "quantity": 1,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6aa3f65f6d0b3ce1040d0667",
+          "quantity": 50,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6d36d0b3ce1040d068f",
+          "alternatives": [
+            "6aa3f6d96d0b3ce1040d0691"
+          ]
+        }
+      ],
+      "prepSeconds": 60
+    }
+  ],
+  "media": [],
+  "location": null,
+  "id": "6aa3f6da6d0b3ce1040d0693",
+  "dishId": "6aa3f51552d99764d0847430",
+  "totalPrepSeconds": 1860,
+  "sourceId": "6aa3f6296d0b3ce1040d0655",
+  "index": 0,
+  "modelConfidence": 0.95,
+  "plainTextDescription": "The video opens with an inviting shot of a bowl of spaghetti carbonara, the word “TRADITIONAL” floating above it, instantly establishing the classic nature of the dish. Hands cradle the bowl, and the camera lingers for a moment before transitioning to the promise of a straightforward recipe: “We’re making traditional carbonara, and this is only four ingredients to start.”\n\nThe scene shifts to a close-up of a cutting board where hands are slicing a chunk of guanciale—cured pork cheek—using a large, sharp knife. The camera captures the smooth, confident strokes as the meat is carved into thin strips. The narrator explains, “We're going to slice up our guanciale, this is pork cheek, just into nice thin strips. Remove the rind, we don’t want to eat this, it’s not very nice.” As demonstrated, extra care is taken to cut away the tough outer rind, shown held up for comparison in one hand, before moving on to dicing the meat into small to medium-sized pieces. The visuals reinforce each step, showing the hands methodically chopping, then displaying the cut strips and removed rind.\n\nNext, a block of cheese—most likely pecorino romano or parmesan, given the traditional approach—makes an appearance. Using a sturdy grater, generous shavings are collected into a glass bowl. The narration continues seamlessly: “Next, grate the cheese into a bowl. Then we’re going to add in the egg yolks and give this a whisk around just until it all comes together.” An egg yolk is cracked and added on top, and a whisk is put to work. The camera zooms in on the mixture as it transforms from disparate shreds and yolks to a unified, velvety, golden blend.\n\nMeanwhile, the cooking action shifts to the stove. A bundle of uncooked spaghetti is placed into a pot of vigorously boiling water. The pasta is separated and stirred with practiced hands, ensuring it doesn’t clump. The instructions are clear and faithful to the classic method: “Cook our pasta as per the packet instructions, just let that go in the background.”\n\nAs the pasta boils, attention turns to a cold pan where the diced guanciale is promptly added. The method is deliberate—guanciale is started in a cold pan set over medium heat so it slowly renders its fat. The narrator directs, “Add the guanciale while it’s cold and cook for about four to five minutes, until golden and the fat has rendered.” On screen, cubes of guanciale sizzle and turn bronzed, their rendered fat becoming the flavor foundation of the sauce. A white spatula is used to gently stir and ensure even coloring.\n\nOnce the guanciale is perfectly crisped and golden, cooked pasta is transferred—hot and starchy—directly into the pan. The tongs swoop and stir, ensuring the spaghetti is thoroughly coated in the savory pork fat. The video emphasizes the importance of this step: “Give this a really good mix through so those oils can coat the pasta.”\n\nWith the pasta glistening, it’s time for the crucial moment: “Then we can add in the egg and cheese mix.” The yellow, creamy mixture is poured over the steaming pasta. Swift mixing is essential to prevent the sauce from clumping or scrambling, a point underscored on both screen and narration: “Mix this around really quickly just to avoid it clumping up and scrambling.” The chef’s hands work quickly with tongs and a spoon, ensuring the pasta is silky and glossy, not scrambled.\n\nAs the mixture comes together, starchy pasta water is incorporated little by little, each pour and stir shown in close-up. The narration notes, “Once it’s combined, we can then start adding the pasta water in, just a little bit at a time until you get the perfect consistency.” Visually, the pasta’s transformation is evident: it goes from slightly sticky to creamy and luscious, with the sauce clinging beautifully to each strand.\n\nFor the finish, serving is as intentional as the preparation. The pasta is divided into bowls with tongs, each nest glistening and warm. Toppings are added from the pan, and the dish is carefully garnished. Fresh cheese is grated over the top—another generous snowfall of sharp, salty flavor. In the final touch, a pepper grinder is used to crack black pepper directly onto the steaming pasta.\n\nThe bowl of carbonara, now complete, is lifted close to the camera in a final flourish. Creamy, flecked with bits of golden guanciale, and crowned by freshly grated cheese and black pepper, it looks as inviting as it is authentic. The narrator concludes, “Serve this up into bowls, make sure you top it with that guanciale, grate over some more fresh cheese as well as hitting it up with some cracked black pepper, and there we have it.”\n\nThroughout the video, the overall tone is informative yet inviting—focused on clarity but rich in practical cooking tips. Every cooking method is visually supported: slicing, grating, whisking, boiling, rendering, mixing, and serving. The sequences are smooth, the transitions logical, and each step is visually engaging, making the viewer feel equipped to recreate this time-honored Italian dish. No significant information appears to be missing, and the visuals and narration work hand in hand to provide a comprehensive guide to making traditional carbonara.",
+  "language": "en",
+  "createdAt": "2026-09-11T12:40:58.577Z",
+  "updatedAt": "2026-09-11T12:40:58.577Z"
+}

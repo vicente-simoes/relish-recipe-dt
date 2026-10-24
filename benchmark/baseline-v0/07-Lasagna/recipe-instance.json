@@ -1,0 +1,399 @@
+{
+  "ingredients": [
+    {
+      "ingredientOrDishId": "6adca16dcccc5d80e5533c1a",
+      "quantity": 50,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca176cccc5d80e5533c1c",
+      "quantity": 3,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aabb7ca956caeee2b49f5fa",
+      "quantity": 2,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6adca17bcccc5d80e5533c1f",
+      "quantity": 2,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6adca181cccc5d80e5533c21",
+      "quantity": 2,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6adca186cccc5d80e5533c23",
+      "quantity": 2,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6adca18bcccc5d80e5533c25",
+      "quantity": 200,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca190cccc5d80e5533c27",
+      "quantity": 200,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa406d26d0b3ce1040d06bc",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aa3f6596d0b3ce1040d0665",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6adca195cccc5d80e5533c2b",
+      "quantity": 0,
+      "unit": "nut"
+    },
+    {
+      "ingredientOrDishId": "6adca19acccc5d80e5533c2d",
+      "quantity": 2,
+      "unit": "glasses"
+    },
+    {
+      "ingredientOrDishId": "6adca19fcccc5d80e5533c2f",
+      "quantity": 50,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca1a4cccc5d80e5533c31",
+      "quantity": 400,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca1a9cccc5d80e5533c33",
+      "quantity": null,
+      "unit": null
+    },
+    {
+      "ingredientOrDishId": "6aabb2e1956caeee2b49f5bd",
+      "quantity": 50,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca1aecccc5d80e5533c36",
+      "quantity": 1,
+      "unit": "unit"
+    },
+    {
+      "ingredientOrDishId": "6aa406c76d0b3ce1040d06b5",
+      "quantity": 4,
+      "unit": "tablespoons"
+    },
+    {
+      "ingredientOrDishId": "6aabb2db956caeee2b49f5b9",
+      "quantity": 1,
+      "unit": "litre"
+    },
+    {
+      "ingredientOrDishId": "6adca1b4cccc5d80e5533c3a",
+      "quantity": 100,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6aa3f6336d0b3ce1040d0659",
+      "quantity": 50,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca1bbcccc5d80e5533c3d",
+      "quantity": 50,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca1bfcccc5d80e5533c3f",
+      "quantity": 300,
+      "unit": "grams"
+    },
+    {
+      "ingredientOrDishId": "6adca1c4cccc5d80e5533c41",
+      "quantity": null,
+      "unit": null
+    }
+  ],
+  "tools": [
+    {
+      "tool": "6aa3f6996d0b3ce1040d067c",
+      "alternatives": [
+        "6aa3f6a56d0b3ce1040d0680"
+      ]
+    },
+    {
+      "tool": "6aa3f67f6d0b3ce1040d0674",
+      "alternatives": [
+        "6aa3f6b46d0b3ce1040d0684"
+      ]
+    },
+    {
+      "tool": "6adca1cbcccc5d80e5533c48",
+      "alternatives": [
+        "6adca1cbcccc5d80e5533c48"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "description": "Prepare the ragu sauce by starting to cook the pancetta in a pan.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca16dcccc5d80e5533c1a",
+          "quantity": 50,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6996d0b3ce1040d067c",
+          "alternatives": [
+            "6aa3f6a56d0b3ce1040d0680",
+            "6aa3f6a56d0b3ce1040d0680"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add bay leaves and garlic cloves to the cooking pancetta.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca176cccc5d80e5533c1c",
+          "quantity": 3,
+          "unit": "units"
+        },
+        {
+          "ingredientOrDishId": "6aabb7ca956caeee2b49f5fa",
+          "quantity": 2,
+          "unit": "units"
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Remove rosemary leaves and add diced carrots, celery, and red onions to the pan.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca17bcccc5d80e5533c1f",
+          "quantity": 2,
+          "unit": "units"
+        },
+        {
+          "ingredientOrDishId": "6adca181cccc5d80e5533c21",
+          "quantity": 2,
+          "unit": "units"
+        },
+        {
+          "ingredientOrDishId": "6adca186cccc5d80e5533c23",
+          "quantity": 2,
+          "unit": "units"
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add minced pork and beef to the pan, breaking up the meat as it cooks.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca18bcccc5d80e5533c25",
+          "quantity": 200,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6adca190cccc5d80e5533c27",
+          "quantity": 200,
+          "unit": "grams"
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Season with salt, black pepper, and nutmeg, then add red wine to deglaze the pan.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa406d26d0b3ce1040d06bc",
+          "quantity": null,
+          "unit": null
+        },
+        {
+          "ingredientOrDishId": "6aa3f6596d0b3ce1040d0665",
+          "quantity": null,
+          "unit": null
+        },
+        {
+          "ingredientOrDishId": "6adca195cccc5d80e5533c2b",
+          "quantity": 0,
+          "unit": "nut"
+        },
+        {
+          "ingredientOrDishId": "6adca19acccc5d80e5533c2d",
+          "quantity": 2,
+          "unit": "glasses"
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Mix in a handful of lentils and crush in large plum tomatoes, then add water.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca19fcccc5d80e5533c2f",
+          "quantity": 50,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6adca1a4cccc5d80e5533c31",
+          "quantity": 400,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6adca1a9cccc5d80e5533c33",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Simmer the ragu mixture for about 1.5 hours until thickened.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": 5400
+    },
+    {
+      "description": "Prepare the béchamel sauce by melting butter and cooking finely sliced leek.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb2e1956caeee2b49f5bd",
+          "quantity": 50,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6adca1aecccc5d80e5533c36",
+          "quantity": 1,
+          "unit": "unit"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6996d0b3ce1040d067c",
+          "alternatives": []
+        },
+        {
+          "tool": "6aa3f67f6d0b3ce1040d0674",
+          "alternatives": [
+            "6aa3f6b46d0b3ce1040d0684"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Add flour to the softened leeks to create a roux, then whisk in milk.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa406c76d0b3ce1040d06b5",
+          "quantity": 4,
+          "unit": "tablespoons"
+        },
+        {
+          "ingredientOrDishId": "6aabb2db956caeee2b49f5b9",
+          "quantity": 1,
+          "unit": "litre"
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Blend the béchamel sauce until smooth and stir in cheddar cheese, Parmesan, and smoked mozzarella.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca1b4cccc5d80e5533c3a",
+          "quantity": 100,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6aa3f6336d0b3ce1040d0659",
+          "quantity": 50,
+          "unit": "grams"
+        },
+        {
+          "ingredientOrDishId": "6adca1bbcccc5d80e5533c3d",
+          "quantity": 50,
+          "unit": "grams"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6adca1cbcccc5d80e5533c48",
+          "alternatives": [
+            "6adca1cbcccc5d80e5533c48"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Assemble the lasagna by layering ragu, pasta sheets, and béchamel sauce.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca1bfcccc5d80e5533c3f",
+          "quantity": 300,
+          "unit": "grams"
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Top with remaining béchamel and sprinkle additional cheese before baking.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": null
+    },
+    {
+      "description": "Bake the lasagna in a preheated oven at 180°C (350°F) for 40-45 minutes.",
+      "ingredients": [],
+      "tools": [],
+      "prepSeconds": 2400
+    },
+    {
+      "description": "Let cool slightly and serve, garnishing with fresh greens if desired.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6adca1c4cccc5d80e5533c41",
+          "quantity": null,
+          "unit": null
+        }
+      ],
+      "tools": [],
+      "prepSeconds": null
+    }
+  ],
+  "media": [],
+  "location": null,
+  "id": "6adca1cdcccc5d80e5533c4b",
+  "dishId": "6aab09a863dfc2d3bd201e19",
+  "totalPrepSeconds": 7800,
+  "sourceId": "6adca165cccc5d80e5533c18",
+  "index": 0,
+  "modelConfidence": 0.95,
+  "plainTextDescription": "The video opens in a welcoming kitchen, where a man in a plaid shirt—brimming with enthusiasm—stands facing the camera, his hands together as he energetically greets his audience: “Hi lovely people! Okay, we are going to make the most delicious lasagna al forno, right? A classic.” Around him, the kitchen counter is neatly arranged with a variety of fresh and vibrant ingredients, including chopped vegetables, waiting to play their part in this comforting Italian classic.\n\nHe sets the tone for the recipe, promising a solid, fail-safe lasagna that will delight family and friends. “We're gonna do a lasagna al forno with a meat ragu,” he shares, and without delay, begins the first critical steps.\n\nHe picks up a chunk of smoked pancetta—explaining the importance of quality bacon—and demonstrates how to finely slice it before tossing it into a heating pan. The sound of sizzling and the aroma of smoky bacon soon fill the air. As the bacon cooks, he layers in aromatic bay leaves and plump garlic cloves, taking care to explain and demonstrate the removal of rosemary leaves, which will infuse the sauce with their earthy fragrance.\n\nWorking methodically, he next adds diced carrots, celery, and the “lovely red onions” to the pan. The visual shifts between close-ups of his hands and overhead shots of these colourful vegetables as they sizzle, softening over about five minutes—a ritual he describes with obvious affection for the process of building a hearty ragu.\n\nWhen the vegetables are ready, he makes space in the pan and introduces minced meat, starting with pork—his favourite cut being the minced shoulder—followed by beef. With his spatula, he breaks up the meat and lets it fry, ensuring the excess moisture cooks away and the mince browns beautifully. The camera lingers on close-ups of the bubbling mixture, capturing the transformation as the meat colours and melds with the sweet, softened vegetables.\n\nAfter a good 10 minutes of frying, he seasons the mixture generously with salt, cracked black pepper, and a grating of nutmeg—about half a nut, he specifies—giving the ragu an “old-school spice” touch. Then, as he stirs, he pours in two small glasses of red wine, and an overhead shot shows deep red liquid deglazing the pan, enriching the sauce.\n\nFor extra heartiness and nutrition, he tips in a handful of lentils, assuring viewers: “You will never tell the difference between the lentil and the meat—right? It becomes like one.” Next come large, juicy plum tomatoes, which he crushes directly in the pan, followed by water that he pours in using the emptied tomato tins. The mixture is stirred together, and the pan simmers away, melding the flavours.\n\nThe ragu is left to bubble gently for about an hour and a half, with periodic overhead views of the sauce thickening to a rich, savory consistency. During this time, the chef offers practical advice, checking the ragu’s texture and recommending a splash of water if it seems too dry, reminding viewers that “everyone’s pans are a little bit different.”\n\nWith the ragu developing deep flavour, he pivots to making a bechamel-style white sauce, adding a special twist. He melts 50 grams of butter in a pan, then tosses in finely sliced leek, noting the unique sweetness and subtlety the vegetable imparts, a departure from tradition. He stir-fries the leeks until soft and fragrant, then adds four “medium heat” tablespoons of plain flour, stirring constantly to make a roux. Once the flour and butter are smooth, he pours in a full litre of milk, whisking all the while, until the mixture becomes silky and thick.\n\nIn a practical demonstration, he uses a hand blender to fully blend the sauce until it reaches a luxurious, lump-free texture—an overhead shot reveals the creamy sauce swirling in the pot. To finish the white sauce, he departs from strict Italian tradition by grating in sharp cheddar cheese and a generous handful of Parmesan, followed by a touch of smoked mozzarella, which, he advises, should be used subtly for best results. The camera captures the gooey, stringy transformation of the sauce as the cheeses melt and combine, promising a sauce that is both “amazing” and deeply flavourful.\n\nWith both sauces ready, he moves back to the ragu, checking its consistency in the pan. Satisfied, he gathers all his elements: the luscious meat sauce, the silky cheese-infused bechamel, and fresh pasta sheets. He gives a tip about pasta, recommending fresh over dried if possible for a better texture.\n\nThe assembly begins with a ladleful of rich meat ragu spread evenly across the base of a casserole dish. He then places a layer of fresh pasta sheets on top, followed by a drizzle of white sauce. The process is repeated—meat, pasta, white sauce—in carefully stacked layers until all the ingredients are used. The final assembly receives a last, lavish spoonful of white sauce and a “kiss of cheese” on top, grating more cheddar, Parmesan, and perhaps a touch of smoked mozzarella for extra allure.\n\nThe layered lasagna is now oven-ready. With a flourish, he places the finished dish—its top generously sprinkled with cheese—into an oven preheated to 180°C (350°F). “About 40 to 45 minutes!” he instructs, smiling as he looks towards the dish’s golden future.\n\nAfter the timer rings, the camera captures a glorious close-up of the lasagna, the top deeply browned, bubbling, and speckled with crispy cheese. The chef, unable to resist, forgoes the suggested 5–10 minute resting period for neater slices—he’s simply too eager. He cuts a generous wedge, gooey cheese stretching between layers dotted with rich ragu and pasta, and serves it onto a plate. The dish is garnished with fresh greens for colour and freshness.\n\nAs he tastes his creation—eyes closed in pleasure, fork in hand—he describes the result: a perfect balance between well-structured pasta, savoury, flavourful ragu, and a luxuriously stringy, flavour-packed white sauce that surpasses ordinary bechamel. The satisfaction is palpable as he urges viewers to “give it a go,” encouraging them to shop for ingredients and make their own comforting, humble lasagna.\n\nThroughout the video, the visuals are full of dynamic close-ups and hands-on techniques: carefully diced vegetables, minced meat browning, pans steaming, roux thickening, cheeses grating, sauces poured and blended, all with the chef’s lively narration. Utensils such as wooden spoons, ladles, hand blenders, graters, and spatulas are all displayed in use. Though not every camera angle or score is described in the data, the viewer can clearly sense a bustling, aromatic kitchen—full of warmth, personality, and inviting food.\n\nIn closing, the chef—beaming with pride with the finished lasagna beside him—salutes the audience: “What are you waiting for? Get the recipe, get shopping, get cooking, and enjoy a humble, delicious, comforting lasagna. Go for it, get stuck in.” \n\nThe kitchen fades out, leaving the viewer inspired and hungry for their own homemade lasagna.",
+  "language": "en",
+  "createdAt": "2026-10-24T12:17:17.715Z",
+  "updatedAt": "2026-10-24T12:17:17.715Z"
+}

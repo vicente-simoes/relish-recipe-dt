@@ -1,0 +1,216 @@
+{
+  "ingredients": [
+    {
+      "ingredientOrDishId": "6aabb2bf956caeee2b49f59b",
+      "quantity": 1,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aa406bc6d0b3ce1040d06ab",
+      "quantity": 2,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aa406c76d0b3ce1040d06b5",
+      "quantity": null,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aabb2c9956caeee2b49f5a2",
+      "quantity": null,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aabb215956caeee2b49f558",
+      "quantity": null,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aabb2d1956caeee2b49f5b1",
+      "quantity": null,
+      "unit": "units"
+    },
+    {
+      "ingredientOrDishId": "6aabb2d6956caeee2b49f5b5",
+      "quantity": null,
+      "unit": "units"
+    }
+  ],
+  "tools": [
+    {
+      "tool": "6aabb2dc956caeee2b49f5ba",
+      "alternatives": [
+        "6aabb2e4956caeee2b49f5c3"
+      ]
+    },
+    {
+      "tool": "6aabb2f2956caeee2b49f5cd",
+      "alternatives": [
+        "6aa406e56d0b3ce1040d06c9",
+        "6aabb2fc956caeee2b49f5d1"
+      ]
+    },
+    {
+      "tool": "6aa406e56d0b3ce1040d06c9",
+      "alternatives": [
+        "6aabb2fc956caeee2b49f5d1"
+      ]
+    },
+    {
+      "tool": "6aa3f6996d0b3ce1040d067c",
+      "alternatives": [
+        "6aabb309956caeee2b49f5d5",
+        "6aa3f6a56d0b3ce1040d0680"
+      ]
+    },
+    {
+      "tool": "6aabb2fc956caeee2b49f5d1",
+      "alternatives": []
+    }
+  ],
+  "steps": [
+    {
+      "description": "Pound the chicken breast flat with a meat mallet while it's protected by plastic wrap.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb2bf956caeee2b49f59b",
+          "quantity": 1,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aabb2dc956caeee2b49f5ba",
+          "alternatives": [
+            "6aabb2e4956caeee2b49f5c3"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Crack two fresh eggs into a clear glass dish.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa406bc6d0b3ce1040d06ab",
+          "quantity": 2,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aabb2f2956caeee2b49f5cd",
+          "alternatives": [
+            "6aa406e56d0b3ce1040d06c9"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Dredge the chicken in a shallow dish filled with flour, ensuring it is coated thoroughly.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aa406c76d0b3ce1040d06b5",
+          "quantity": null,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aabb2f2956caeee2b49f5cd",
+          "alternatives": [
+            "6aabb2fc956caeee2b49f5d1"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Dip the chicken into the egg mixture, coating it evenly.",
+      "ingredients": [],
+      "tools": [
+        {
+          "tool": "6aabb2f2956caeee2b49f5cd",
+          "alternatives": [
+            "6aa406e56d0b3ce1040d06c9"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Press the chicken into a bowl of breadcrumbs until fully coated.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb2c9956caeee2b49f5a2",
+          "quantity": null,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa406e56d0b3ce1040d06c9",
+          "alternatives": [
+            "6aabb2fc956caeee2b49f5d1"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Fry the breaded chicken in hot oil until browned and crispy.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb215956caeee2b49f558",
+          "quantity": null,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aa3f6996d0b3ce1040d067c",
+          "alternatives": [
+            "6aabb309956caeee2b49f5d5",
+            "6aa3f6a56d0b3ce1040d0680"
+          ]
+        }
+      ],
+      "prepSeconds": null
+    },
+    {
+      "description": "Serve the schnitzel with a side of fries and lemon wedges.",
+      "ingredients": [
+        {
+          "ingredientOrDishId": "6aabb2d1956caeee2b49f5b1",
+          "quantity": null,
+          "unit": "units"
+        },
+        {
+          "ingredientOrDishId": "6aabb2d6956caeee2b49f5b5",
+          "quantity": null,
+          "unit": "units"
+        }
+      ],
+      "tools": [
+        {
+          "tool": "6aabb2fc956caeee2b49f5d1",
+          "alternatives": []
+        }
+      ],
+      "prepSeconds": null
+    }
+  ],
+  "media": [],
+  "location": null,
+  "id": "6aabb30b956caeee2b49f5d8",
+  "dishId": "6aab09b763dfc2d3bd201e1a",
+  "totalPrepSeconds": null,
+  "sourceId": "6aabb2b8956caeee2b49f597",
+  "index": 0,
+  "modelConfidence": 0.95,
+  "plainTextDescription": "The video opens with a lively, upbeat mood, as both music and captions introduce a rhythmic energy. The lyrics, a mix of English and German, set a playful and flirtatious tone: “I like the way you move, oh la la. Baby, sei meine Begleitung heute Nacht,” echo through the kitchen as the camera focuses on purposeful hands preparing a meal.\n\nAt the very start, the scene shows someone pounding a raw chicken breast flat with a meat mallet. The chicken is protected by a layer of plastic wrap and rests on a sturdy wooden cutting board, ensuring even thickness—an essential foundation for the classic schnitzel to come. Immediately after, the cook cracks two fresh eggs into a clear glass dish, the yolks and whites sliding together in preparation for the breading process.\n\nAs the energetic captions continue, with playful lines like “Ich hab' Waffen und das zieh' ich heute aus mit dir im Club,” the kitchen action doesn’t miss a beat. The now-tenderized piece of chicken is dredged in a shallow white dish filled with flour. The fine dust clings to the moist surface, a crucial step for ensuring the breading adheres properly later.\n\nNext, the chicken breast is dipped into the waiting egg mixture, coating it evenly as it is turned gently in the glass dish. No words are needed to explain the methodical focus on each step—the visuals speak for themselves. Then, the piece moves to another shallow bowl, this one holding a generous amount of breadcrumbs. Each side is pressed gently into the crumbs, building up a uniform, golden layer. The close-up that follows highlights the crumb coating: every nook and cranny is covered, promising a satisfying crunch in the final product.\n\nWith the prep complete, attention shifts to a sizzling hot pan of oil. The breaded chicken breast is carefully placed into the pan—there’s a subtle, visible shimmer to the oil, signaling it has reached the ideal frying temperature. The chicken browns quickly, forming that irresistible schnitzel crust.\n\nThe culinary process concludes with a scene that celebrates the finished dish. The cook presents a plate arranged with care: a perfectly fried schnitzel, a nest of golden fries, and bright wedges of lemon on the side. The person lifts a forkful of schnitzel, takes a bite, and chews appreciatively, savoring the flavors and textures. The plate remains in hand, with the person continuing to eat, clearly enjoying the meal they’ve just prepared.\n\nThere is no additional spoken explanation or dialogue besides the music and lyrics overlay, nor is there any instruction by voice; all technique and timing are communicated visually. Every action—from pounding the chicken, coating it in flour, egg, and breadcrumbs, to frying and finally tasting—unfolds with clarity and focus. The absence of explicit measurements or recipe quantities hints that this is a visually-driven cooking demonstration, relying on clear cinematography and simple, methodical movements to guide the viewer through the process of making classic schnitzel.\n\nIn summary, the video seamlessly blends lively pop music and energetic captions with detailed, step-by-step visuals of preparing, cooking, and enjoying schnitzel and fries, making for a vibrant and appetizing viewing experience, even in the absence of explicit verbal instruction.",
+  "language": null,
+  "createdAt": "2026-09-17T09:29:47.339Z",
+  "updatedAt": "2026-09-17T09:29:47.339Z"
+}
