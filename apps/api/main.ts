@@ -1,4 +1,6 @@
-import { cleanupTmpDir } from "@relish/storage"
+import { withDependencies, withSelectedDependencies } from "@relish/di"
+import { createAdapters } from "@relish/source-adapters"
+import { createLogger } from "@relish/utils/logger"
 import { Scalar } from "@scalar/hono-api-reference"
 import { blue } from "@std/fmt/colors"
 import { Hono } from "hono"
@@ -6,6 +8,7 @@ import { openAPIRouteHandler } from "hono-openapi"
 import { cors } from "hono/cors"
 import { serveStatic } from "hono/deno"
 import { logger } from "hono/logger"
+import { setupCronjobs } from "~/crons.ts"
 import { apiKeyAuth } from "~/lib/auth.ts"
 import { security } from "~/lib/openapi-utils.ts"
 import { apiKeyRoutes } from "~/routes/api-keys.ts"
@@ -15,24 +18,30 @@ import { recipeInstanceRoutes } from "~/routes/recipe-instances.ts"
 import { recipeRoutes } from "~/routes/recipes.ts"
 import { taskRoutes } from "~/routes/tasks.ts"
 import { toolRoutes } from "~/routes/tools.ts"
-import { pool } from "~/tasks/pool.ts"
 
 const app = new Hono()
 
 app.use(logger())
 app.use(cors())
 
+// Provide dependencies to each request call chain via AsyncLocalStorage
+app.use("*", async (_, next) => {
+  const logger = createLogger()
+  const adapters = withSelectedDependencies({ logger }, createAdapters)
+  return await withDependencies({ logger, adapters }, () => next())
+})
+
 app.get("/", (c) => c.redirect("/scalar"))
 
 app.use("/api/*", apiKeyAuth)
 
-app.route("/api/keys", apiKeyRoutes)
-app.route("/api/dishes", dishRoutes)
-app.route("/api/recipes", recipeRoutes)
-app.route("/api/recipe-instances", recipeInstanceRoutes)
-app.route("/api/ingredients", ingredientRoutes)
-app.route("/api/tools", toolRoutes)
-app.route("/api/tasks", taskRoutes)
+app.route("/api/keys", apiKeyRoutes())
+app.route("/api/dishes", dishRoutes())
+app.route("/api/recipes", recipeRoutes())
+app.route("/api/recipe-instances", recipeInstanceRoutes())
+app.route("/api/ingredients", ingredientRoutes())
+app.route("/api/tools", toolRoutes())
+app.route("/api/tasks", taskRoutes())
 
 app.get(
   "/docs",
@@ -68,33 +77,31 @@ app.use("/favicon.webp", serveStatic({ path: "./public/favicon.webp" }))
 
 app.notFound((c) => c.json({ message: "Not found" }, 404))
 
-pool.start()
+// TODO: properly restore this
+// TODO: A crash of the web server does not crash workers, so this could theoretically re-queue all jobs even if they are perfectly fine
+// Restart unfinished tasks
+/* const { db } = container
+  const unfinishedTasks = await db.task.findMany({
+    where: { status: { in: ["STALLED"] } },
+  })
+  if (unfinishedTasks.length > 0) {
+    console.log(`🔄 Restarting ${unfinishedTasks.length} unfinished tasks`)
+    await db.task.updateMany({
+      data: { status: "PENDING" },
+      where: { id: { in: unfinishedTasks.map((t) => t.id) } },
+    })
+    await Promise.all(
+      unfinishedTasks.map((task) => queue.add("process", { foo: "bar" }, { jobId: task.id })),
+    )
+  } */
 
+// Start the web server
 const msg = `
 🍛 Relish server started
 
    API:   ${blue("http://localhost:8000/api")}
    Docs:  ${blue("http://localhost:8000/scalar")}
 `
+Deno.serve({ onListen: () => console.log(msg) }, app.fetch)
 
-const ac = new AbortController()
-
-Deno.serve({ signal: ac.signal, onListen: () => console.log(msg) }, app.fetch)
-
-let shuttingDown = false
-const shutdown = async () => {
-  if (shuttingDown) return
-  shuttingDown = true
-  console.log("Shutting down Hono server...")
-  ac.abort()
-  console.log("Terminating worker pool...")
-  await pool.destroy()
-  Deno.exit(0)
-}
-Deno.addSignalListener("SIGINT", shutdown)
-Deno.addSignalListener("SIGTERM", shutdown)
-
-// Every day at 00:00, cleanup temporary files and folders older than 1 week.
-Deno.cron("Temporary files cleanup", "0 0 * * *", async () => {
-  await cleanupTmpDir({})
-})
+setupCronjobs()

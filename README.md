@@ -34,8 +34,8 @@ The system extracts structured recipe data (ingredients, tools, steps, and more)
     Shared reusable libraries.
     - `env`\
       Handles loading and validating environment variables.
-    - `ingestor`\
-      Logic to ingest data from external sources into the RELISH database.
+    - `sdk`\
+      Shared business logic for CRUD operations on the Relish database.
     - `modeling` (placeholder)\
       Simulate the evolution of recipes based on certain factors.
     - `recipe-processing`\
@@ -57,6 +57,8 @@ The system extracts structured recipe data (ingredients, tools, steps, and more)
 - **Database**
   - **MongoDB Community Server**: core database engine.
   - **MongoDB Community Search**: search service based on Apache Lucene.
+- **Job queue system**
+  - **Redis**: to persist the queue state
 - **OpenAI models**\
   Right now the system is using the following models:
   - **GPT-4o mini** for text generation
@@ -69,7 +71,7 @@ The system extracts structured recipe data (ingredients, tools, steps, and more)
 ### Requirements
 
 - To run the whole system using Docker, you only need [Docker](https://www.docker.com/) (obviously).
-- Alternatively, you can run the database using Docker and the rest of the system locally, which is handy for development. In this case, you're going to need:
+- Alternatively, you can run the database and Redis using Docker and the rest of the system locally, which is handy for development. In this case, you're going to need:
   - [Docker](https://www.docker.com/)
   - [Deno](https://deno.com/)
   - [yt-dlp](https://github.com/yt-dlp/yt-dlp) in `PATH` to download videos from YouTube
@@ -89,7 +91,7 @@ The system extracts structured recipe data (ingredients, tools, steps, and more)
   # You can use this shorthand if Deno is installed
   deno task setup
   # Or the full command otherwise
-  docker compose --profile setup run --rm setup-generator
+  docker compose --profile setup run --rm relish-setup-generator
   ```
 
 **Option a. Fully on Docker**
@@ -100,7 +102,7 @@ The system extracts structured recipe data (ingredients, tools, steps, and more)
   # You can use this shorthand if Deno is installed
   deno task sys:up
   # Or the full command otherwise
-  docker compose up relish mongod mongot --build -d
+  docker compose up relish-api relish-worker mongod mongot redis --build -d --scale relish-worker=3
   ```
 
 **Option b. Only the database on Docker** (best for local development)
@@ -114,6 +116,26 @@ The system extracts structured recipe data (ingredients, tools, steps, and more)
   deno task db:push
   ```
 
+**Accessing protected routes**
+
+The system uses API keys to protect routes and resources. Keys can only be managed via CLI (no REST APIs). You can get an overview of the available commands by running `deno task cli:start`.
+
+- To create a new API key with full access to every endpoint, run the following command:
+
+  ```bash
+  deno task cli:start api-keys create --name "Full access" --access "
+    Dish:CREATE,READ,UPDATE,DELETE
+    Recipe:CREATE,READ,UPDATE,DELETE
+    RecipeInstance:CREATE,READ,UPDATE,DELETE
+    Ingredient:CREATE,READ,UPDATE,DELETE
+    Tool:CREATE,READ,UPDATE,DELETE
+    Task:CREATE,READ,UPDATE,DELETE"
+  ```
+
+- To create an API key with partial access, just remove a row from the above command (to revoke CRUD access to a certain collection), or an action to forbid a specific operation from a specific collection.
+
+- Access to the `Task` collection carries the ability to retrieve current and past tasks (`READ`) and to launch new ones (`CREATE`)
+
 ## Notes on development practices
 
 ### Classes
@@ -122,9 +144,10 @@ The project tries to avoid using classes in favor of a simpler, more concise fac
 
 ### Dependency management
 
-The code in the project can run in three different "environments": REST API handlers, direct execution (CLI), and worker threads. Potentially, all three can run code at the same time, in parallel. To prevent concurrency issues, and to provide different dependency implementations based on the environment, a very minimal dependency injection setup was created.
+The code in the project can run in three different environments: REST API handlers, direct execution (CLI), and worker threads. Potentially, all three can run code at the same time, in parallel. To prevent concurrency issues, and to provide different dependency implementations based on the environment, a minimal dependency injection setup based on AsyncLocalStorage was created under `packages/di`.
 
-In `packages/utils/types.ts`, the `Container` type defines a set of dependencies that all apps (`api` and `cli`) should provide. The rules for using it are simple:
+TL;DR:
 
-- All of the functions in `packages` should never import or directly access the dependencies defined in `Container`. Instead, they should accept them as part of a first parameter named `container`. The parameter can either be the entire DI `Container`, or a subset of it through the `ContainerOf<"key1" | "key2">` helper type.
-- All of the apps in `apps` should include at least one `app.container.ts` file, either exporting an object of type `Container`, or a factory function of type `ContainerFactory`. The app is then responsible for passing its container/s dependencies to the function call from `packages`.
+1. Wrap any entrypoint in a `withDependencies` call, providing the required dependencies. Current entrypoints include: `apps/cli/main.ts`, `apps/api/main.ts`, and `apps/api/tasks/worker.ts`.
+2. If a dependency requires another dependency to initialize, wrap its creation in `withSelectedDependencies`, passing the required dependencies.
+3. Use dependency getters (e.g. `getLogger`) from anywhere, as long as somewhere up in the tree a `withDependencies` or `withSelectedDependencies` function wraps the chain to provide the required dependencies (point 1).

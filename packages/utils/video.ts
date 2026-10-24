@@ -6,6 +6,10 @@ import { generateText, experimental_transcribe as transcribe } from "ai"
 import sharp from "sharp"
 import { z } from "zod"
 
+// ---
+// Video duration
+// ---
+
 const FfprobeDurationSchema = z.object({
   format: z.object({
     duration: z.coerce.number(),
@@ -21,7 +25,7 @@ export const getVideoDuration = async (videoPath: string) => {
     "json",
     "-v",
     "error",
-    videoPath
+    videoPath,
   )
   try {
     return FfprobeDurationSchema.parse(JSON.parse(stdout)).format.duration
@@ -29,6 +33,10 @@ export const getVideoDuration = async (videoPath: string) => {
     return null
   }
 }
+
+// ---
+// Audio extraction
+// ---
 
 export const extractAudioFromVideo = async (args: {
   inputVideoPath: string
@@ -42,15 +50,42 @@ export const extractAudioFromVideo = async (args: {
     "0",
     "-map",
     "a",
-    args.outputAudioPath
+    args.outputAudioPath,
   )
 }
+
+// ---
+// Frame extraction
+// ---
 
 const readFrames = async (framesDir: string) => {
   const res = (await Array.fromAsync(Deno.readDir(framesDir)))
     .filter((f) => f.isFile && f.name.startsWith("frame-"))
     .toSorted((a, b) => a.name.localeCompare(b.name))
   return res
+}
+
+// Frame rate for videos at or below SHORT_VIDEO_THRESHOLD
+const SHORT_VIDEO_MAX_FPS = 1
+// Frame rate used for videos at or above LONG_VIDEO_THRESHOLD (1 frame every 10 seconds)
+const LONG_VIDEO_MIN_FPS = 1 / 10
+// Videos at or below this duration are extracted at SHORT_VIDEO_MAX_FPS
+const SHORT_VIDEO_THRESHOLD = 2 * 60 // 120s
+// Videos at or above this duration are extracted at LONG_VIDEO_MIN_FPS
+const LONG_VIDEO_THRESHOLD = 30 * 60 // 1800s
+
+/**
+ * Compute a dynamic frame rate based on the video duration.
+ *
+ * Short videos (<= 2 minutes) result in 1 fps; very long videos (>= 30 minutes) get 1 frame every 10 seconds (0.1 fps). Between the two, the frame spacing is interpolated linearly so the total number of extracted frames stays roughly constant.
+ */
+export const getFramesPerSecond = (durationSeconds: number): number => {
+  if (durationSeconds <= SHORT_VIDEO_THRESHOLD) return SHORT_VIDEO_MAX_FPS
+  if (durationSeconds >= LONG_VIDEO_THRESHOLD) return LONG_VIDEO_MIN_FPS
+  const t =
+    (durationSeconds - SHORT_VIDEO_THRESHOLD) / (LONG_VIDEO_THRESHOLD - SHORT_VIDEO_THRESHOLD)
+  const spacing = 1 / SHORT_VIDEO_MAX_FPS + t * (1 / LONG_VIDEO_MIN_FPS - 1 / SHORT_VIDEO_MAX_FPS)
+  return 1 / spacing
 }
 
 export const extractFramesFromVideo = async (args: {
@@ -65,11 +100,11 @@ export const extractFramesFromVideo = async (args: {
     args.videoPath,
     "-vf",
     `fps=${args.fps}`,
-    `${args.outDir}/frame-%04d.jpeg`
+    `${args.outDir}/frame-%04d.jpeg`,
   )
   // Resize images to 1080p if larger than that
   const frames = (await readFrames(args.outDir)).map((f) => join(args.outDir, f.name))
-  for (const frame of frames) {
+  for (const [index, frame] of frames.entries()) {
     const image = sharp(frame)
     const metadata = await image.metadata()
     const size =
@@ -78,8 +113,16 @@ export const extractFramesFromVideo = async (args: {
         : { width: 1080, height: Math.round((metadata.height * 1080) / metadata.width) }
     const data = await image.resize(size.width, size.height).toBuffer()
     await Deno.writeFile(frame, data)
+    // Rename frames to encode their actual timestamp in seconds even when frames are extracted at less than 1 fps
+    const actualSecond = Math.round(index / args.fps)
+    const newName = join(args.outDir, `frame-${`${actualSecond}`.padStart(4, "0")}.jpeg`)
+    if (newName !== frame) await Deno.rename(frame, newName)
   }
 }
+
+// ---
+// Caption extraction and formatting
+// ---
 
 /** Convert a timestamp string in the format HH:mm:ss.sss to seconds */
 const timestampToSeconds = (timestamp: string) => {
@@ -140,6 +183,10 @@ export const vttToJson = (vtt: string) => {
   return formattedSegments
 }
 
+// ---
+// Audio transcription
+// ---
+
 export const transcribeAudio = async (audioPath: string) => {
   const { text, segments } = await transcribe({
     model: whisper1,
@@ -159,21 +206,25 @@ export const transcribeAudio = async (audioPath: string) => {
   return { text, segments: formattedSegments }
 }
 
+// ---
+// Video frames description
+// ---
+
 const imageDescriptionPrompt = `
 You are an expert video analysis model.
-You will receive a list of still image frames extracted from a video, one frame per second, in chronological order.
+You will receive a list of still image frames extracted from a video, in chronological order. Frames may be sampled more than one second apart (e.g., one frame every few seconds) and the sequence may not start at second 0.
 Your task is to generate a structured JSON description of what happens in the video exactly as it appears, frame by frame, without reordering, guessing, or adding inferred context.
 
-I will provide you with a sequence of image frames, each labeled with a timestamp in seconds (e.g., "frame-0001.png", "frame-0002.png", "frame-0003.png", etc.).
+I will provide you with a sequence of image frames, each labeled with its **actual timestamp in seconds** (e.g., "frame-0000.png", "frame-0012.png", "frame-0024.png", etc.). The label is the ground truth for the second each frame corresponds to — do not assume frames are one second apart or start at zero.
 Your goal is to describe the events in the video in a **structured, timestamped JSON array**.
 
 Please follow these rules carefully:
 
-1. Each JSON object represents a segment of time (can be a single second or a short range).
+1. Each JSON object represents a segment of time (can be a single frame or a short range of consecutive frames).
 2. Each object must have:
    - \`text\` - a natural-language description of what happens in that time span.
-   - \`startSecond\` - the starting timestamp (integer).
-   - \`endSecond\` - the ending timestamp (integer).
+   - \`startSecond\` - the starting timestamp (integer), taken from the frame labels.
+   - \`endSecond\` - the ending timestamp (integer), taken from the frame labels.
 3. Group consecutive frames together when the same action or scene continues.
 4. Use concise, factual language - describe visible people, objects, motion, or scene changes.
 5. Output **only valid JSON** - no extra commentary, no Markdown, no explanations. For example:
@@ -182,13 +233,13 @@ Please follow these rules carefully:
    [
      {
        "text": "A man sits at a desk typing on a laptop.",
-       "startSecond": 0,
-       "endSecond": 2
+       "startSecond": 10,
+       "endSecond": 20
      },
      {
        "text": "He looks up and waves at someone entering the room.",
-       "startSecond": 3,
-       "endSecond": 5
+       "startSecond": 30,
+       "endSecond": 40
      }
    ]
    \`\`\`
@@ -202,41 +253,83 @@ const OutputSchema = z.array(
     startSecond: z.number(),
     endSecond: z.number(),
     text: z.string(),
-  })
+  }),
 )
+
+export type FrameDescription = { startSecond: number; endSecond: number; text: string }
+
+export type FailedBatch = {
+  /** Index of the batch in the original sequence of batches */
+  index: number
+  /** The error that caused the batch to fail */
+  reason: unknown
+}
+
+export type DescribeVideoFramesResult = {
+  /** Frame descriptions merged from all successfully processed batches */
+  description: FrameDescription[]
+  /** Batches that failed to be described */
+  failedBatches: FailedBatch[]
+  /** Total number of batches the frames were split into */
+  totalBatches: number
+}
+
+const MAX_FRAMES_PER_REQUEST = 10
 
 export const describeVideoFrames = async (
   args:
     | { frames: { label: string; image: string | Uint8Array | ArrayBuffer | URL }[] }
-    | { framesDir: string }
-) => {
+    | { framesDir: string },
+): Promise<DescribeVideoFramesResult> => {
   const frames =
     "frames" in args
       ? args.frames
       : await Promise.all(
-          (
-            await readFrames(args.framesDir)
-          ).map(async (f) => ({
+          (await readFrames(args.framesDir)).map(async (f) => ({
             label: f.name,
             image: await Deno.readFile(join(args.framesDir, f.name)),
-          }))
+          })),
         )
-  const { text } = await generateText({
-    model: gpt4_1Mini,
-    system: imageDescriptionPrompt,
-    messages: [
-      {
-        role: "user",
-        content: frames.flatMap((frame) => [
-          { type: "text", text: frame.label },
-          { type: "image", image: frame.image },
-        ]),
-      },
-    ],
+
+  const batches = Array.from(
+    { length: Math.ceil(frames.length / MAX_FRAMES_PER_REQUEST) },
+    (_, i) => frames.slice(i * MAX_FRAMES_PER_REQUEST, (i + 1) * MAX_FRAMES_PER_REQUEST),
+  )
+
+  // Process each batch in a separate request, run in parallel to reduce computation time.
+  // Individual batch failures are reported in the result instead of throwing.
+  const results = await Promise.allSettled(
+    batches.map(async (batch) => {
+      const { text } = await generateText({
+        model: gpt4_1Mini,
+        system: imageDescriptionPrompt,
+        messages: [
+          {
+            role: "user",
+            content: batch.flatMap((frame) => [
+              { type: "text", text: frame.label },
+              { type: "image", image: frame.image },
+            ]),
+          },
+        ],
+      })
+      return OutputSchema.parse(JSON.parse(text))
+    }),
+  )
+
+  const description: FrameDescription[] = []
+  const failedBatches: FailedBatch[] = []
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") description.push(...result.value)
+    else failedBatches.push({ index, reason: result.reason })
   })
-  const res = OutputSchema.parse(JSON.parse(text))
-  return res
+
+  return { description, failedBatches, totalBatches: results.length }
 }
+
+// ---
+// Overall video description
+// ---
 
 const videoDescriptionPrompt = `
 You are an expert media analyst and descriptive writer.

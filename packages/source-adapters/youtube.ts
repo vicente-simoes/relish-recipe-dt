@@ -1,20 +1,27 @@
+import { getLogger } from "@relish/di"
 import { env } from "@relish/env"
-import { evaluateRecipeLikelihood, extractRecipe } from "@relish/recipe-processing"
+import { evaluateRecipeLikelihood, extractRecipes } from "@relish/recipe-processing"
 import { TMP_DIR } from "@relish/storage"
 import { CommandError, executeCommand } from "@relish/utils/command"
-import { Container } from "@relish/utils/types"
+import { tryCatch } from "@relish/utils/try"
 import {
   describeVideo,
   describeVideoFrames,
   extractAudioFromVideo,
   extractFramesFromVideo,
+  getFramesPerSecond,
   getVideoDuration,
   transcribeAudio,
   vttToJson,
 } from "@relish/utils/video"
 import { join } from "@std/path"
 import dayjs from "dayjs"
-import { ExtractedRecipeWithMetadata } from "./mod.ts"
+import {
+  ExtractedRecipeWithMetadata,
+  SourceAdapter,
+  YoutubeSearchParametersSchema,
+  type YoutubeSearchParameters,
+} from "./mod.ts"
 
 // https://developers.google.com/youtube/v3/docs/search/list
 const BASE_URL = "https://www.googleapis.com/youtube/v3/search"
@@ -22,22 +29,7 @@ const BASE_URL = "https://www.googleapis.com/youtube/v3/search"
 // Discard videos that score lower than the recipe likelihood (1-5 scale)
 const RECIPE_LIKELIHOOD_THRESHOLD = 3
 
-type YoutubeSearchParameters = {
-  key: string
-  q: string
-  part: "snippet"
-  type: "video"
-  maxResults: string // 50 max
-  order: "date" | "rating" | "relevance" | "title" | "viewCount"
-  publishedBefore?: string // e.g.: 1970-01-01T00:00:00Z
-  publishedAfter?: string // e.g.: 1970-01-01T00:00:00Z
-  location?: string // e.g.: "37.42307,-122.08427"
-  locationRadius?: string // 1000km max
-  relevanceLanguage?: string // http://www.loc.gov/standards/iso639-2/php/code_list.php
-}
-
-type PartialYoutubeSearchParameters = Pick<YoutubeSearchParameters, "q"> &
-  Partial<YoutubeSearchParameters>
+type YoutubeSearchRequestParams = YoutubeSearchParameters & { key: string }
 
 type YoutubeSearchResult = {
   kind: string
@@ -62,28 +54,101 @@ type YoutubeSearchItem = {
   }
 }
 
-export const parseVideoUrlOrId = (videoURLOrID: string) => {
-  return videoURLOrID.startsWith("http")
-    ? { url: videoURLOrID, id: new URL(videoURLOrID).searchParams.get("v")! }
-    : { url: `https://youtube.com/watch?v=${videoURLOrID}`, id: videoURLOrID }
+/**
+ * Extract the YouTube video ID from various URL formats, or treat the input
+ * as a raw video ID if it doesn't look like a URL.
+ *
+ * Handles formats such as:
+ *  - https://www.youtube.com/watch?v=VIDEO_ID
+ *  - https://youtu.be/VIDEO_ID
+ *  - https://www.youtube.com/embed/VIDEO_ID
+ *  - https://www.youtube.com/v/VIDEO_ID
+ *  - https://www.youtube.com/shorts/VIDEO_ID
+ *  - https://www.youtube.com/live/VIDEO_ID
+ *  - https://m.youtube.com/watch?v=VIDEO_ID
+ *  - https://youtube.com/attribution_link?...&u=/watch?v=VIDEO_ID...
+ *  - Plain video ID string
+ */
+const parseVideoUrlOrId = (videoURLOrID: string): { url: string; id: string } => {
+  // If it's not a URL, treat it as a raw video ID
+  if (!videoURLOrID.startsWith("http")) {
+    return { url: `https://www.youtube.com/watch?v=${videoURLOrID}`, id: videoURLOrID }
+  }
+
+  const url = new URL(videoURLOrID)
+
+  // Standard watch URL: youtube.com/watch?v=VIDEO_ID
+  const vParam = url.searchParams.get("v")
+  if (vParam) {
+    return { url: `https://www.youtube.com/watch?v=${vParam}`, id: vParam }
+  }
+
+  // Short-form and path-based URLs:
+  // - youtu.be/VIDEO_ID
+  // - youtube.com/embed/VIDEO_ID
+  // - youtube.com/v/VIDEO_ID
+  // - youtube.com/shorts/VIDEO_ID
+  // - youtube.com/live/VIDEO_ID
+  const pathMatch = url.pathname.match(/^\/(?:embed|v|shorts|live)\/([a-zA-Z0-9_-]{11})/)
+  if (pathMatch) {
+    return { url: `https://www.youtube.com/watch?v=${pathMatch[1]}`, id: pathMatch[1] }
+  }
+
+  // youtu.be/VIDEO_ID (shorter path, no prefix)
+  if (url.hostname === "youtu.be") {
+    const id = url.pathname.slice(1).split("/")[0]
+    if (id) {
+      return { url: `https://www.youtube.com/watch?v=${id}`, id }
+    }
+  }
+
+  // attribution_link URLs (e.g. from share dialogs)
+  const uParam = url.searchParams.get("u")
+  if (uParam) {
+    const decodedU = new URL(decodeURIComponent(uParam), url.origin)
+    const nestedV = decodedU.searchParams.get("v")
+    if (nestedV) {
+      return { url: `https://www.youtube.com/watch?v=${nestedV}`, id: nestedV }
+    }
+  }
+
+  throw new Error(`Unable to extract a YouTube video ID from the given input: "${videoURLOrID}"`)
 }
 
-export const createYoutubeAdapter = (container: Container) => {
-  const { logger } = container
+export type YoutubeSourceAdapter = ReturnType<typeof createYoutubeAdapter>
+
+export const createYoutubeAdapter = () => {
+  const logger = getLogger()
 
   const youtube = {
-    executeFullPipeline: async (
-      params: { data: YoutubeSearchResult } | PartialYoutubeSearchParameters,
-    ) => {
-      const data =
-        "data" in params ? params.data : await youtube.findVideos({ q: "food", maxResults: "1" })
-      logger.i(
-        `Food data fetched, ${data.items.length} records returned (${data.pageInfo.totalResults} total)`,
-      )
+    findDishSources: async ({ dish }) => {
+      const defaultParams = {
+        key: env.YOUTUBE_API_KEY,
+        q: "food",
+        part: "snippet",
+        type: "video",
+        maxResults: "3",
+        order: "relevance",
+        publishedAfter: dayjs().startOf("D").subtract(1, "w").toISOString(), // Fetch videos uploaded in the last week
+      } satisfies YoutubeSearchRequestParams
+
+      const parsedParams = YoutubeSearchParametersSchema.safeParse(dish.searchMetadata.youtube)
+      if (!parsedParams.success) {
+        logger.w("Invalid youtube search metadata, falling back to defaults", parsedParams.error)
+      }
+      const allParams = { ...defaultParams, ...parsedParams.data }
+
+      logger.i("Fetching food data from YouTube with the following parameters: ", allParams)
+      const url = `${BASE_URL}?${new URLSearchParams(allParams).toString()}`
+      const res = await fetch(url)
+      const data = ((await res.json()) as YoutubeSearchResult).items.map((it) => ({
+        url: parseVideoUrlOrId(it.id.videoId).url,
+        ...it,
+      }))
 
       logger.i("Evaluating recipe likelihood for each video")
       const scores: (number | null)[] = []
-      for (const item of data.items) {
+      for (const item of data) {
         try {
           const score = await evaluateRecipeLikelihood(JSON.stringify(item, null, 2))
           scores.push(score)
@@ -94,8 +159,9 @@ export const createYoutubeAdapter = (container: Container) => {
         }
       }
 
-      let items = data.items.map((item, i) => ({ score: scores[i], metadata: item }))
-      const filename = join(TMP_DIR, "youtube-scored-results.json")
+      let items = data.map((item, i) => ({ score: scores[i], metadata: item }))
+      // Generate a unique filename per run to avoid race conditions among multiple workers/replicas calling findDishSources concurrently
+      const filename = join(TMP_DIR, `youtube-scored-results-${crypto.randomUUID()}.json`)
       logger.i(`Saving results to ${filename}`)
       await Deno.writeTextFile(filename, JSON.stringify(items, null, 2))
 
@@ -104,121 +170,193 @@ export const createYoutubeAdapter = (container: Container) => {
         (item) => item.score !== null && item.score >= RECIPE_LIKELIHOOD_THRESHOLD,
       )
 
-      logger.i("Downloading selected videos for further processing")
-      const recipes: ExtractedRecipeWithMetadata[] = []
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i]!
-        try {
-          const recipes = await youtube.executeVideoPipeline({
-            videoUrlOrId: item.metadata.id.videoId,
-          })
-          recipes.push(
-            ...recipes.map(
-              (r) =>
-                ({
-                  source: item.metadata.id.videoId,
-                  index: i,
-                  ...r,
-                }) satisfies ExtractedRecipeWithMetadata,
-            ),
-          )
-        } catch (e) {
-          if (e instanceof CommandError) {
-            logger.e(e.stdout)
-            logger.e(e.stderr)
-          } else {
-            logger.e(e)
-          }
-        }
-      }
-      return recipes
-    },
-
-    findVideos: async (params: PartialYoutubeSearchParameters) => {
-      const defaultParams = {
-        key: env.YOUTUBE_API_KEY,
-        q: "food",
-        part: "snippet",
-        type: "video",
-        maxResults: "3",
-        order: "relevance",
-        publishedAfter: dayjs().startOf("D").subtract(1, "w").toISOString(), // Fetch videos uploaded in the last week
-      } satisfies YoutubeSearchParameters
-      const allParams = { ...defaultParams, ...params }
-      logger.i("Fetching food data from YouTube with the following parameters: ", allParams)
-      const url = `${BASE_URL}?${new URLSearchParams(allParams).toString()}`
-      const res = await fetch(url)
-      const data = (await res.json()) as YoutubeSearchResult
       return data
     },
 
-    executeVideoPipeline: async ({ videoUrlOrId }: { videoUrlOrId: string }) => {
-      const { id: videoId } = parseVideoUrlOrId(videoUrlOrId)
+    processDishFromSource: async ({ source }) => {
+      // Parse URL. Hard failure means we can't do anything
+      let videoId: string
+      try {
+        videoId = parseVideoUrlOrId(source.url).id
+      } catch (error) {
+        logger.e(`[${source.url}] Failed to parse video URL`, error)
+        return []
+      }
 
-      logger.i(`[${videoId}] Downloading video...`)
       const videoDir = join(TMP_DIR, videoId)
-      const videoPath = await youtube.downloadVideo({ videoUrlOrId, outDir: videoDir })
-      const captionsPath = await youtube.downloadVideoCaptions({ videoUrlOrId, outDir: videoDir })
 
-      logger.i(`[${videoId}] Getting video metadata...`)
-      const duration = await getVideoDuration(videoPath)
+      // Download video
+      const videoPath = await tryCatch(
+        youtube.downloadVideo({ videoUrlOrId: videoId, outDir: videoDir }),
+      )
+      if (!videoPath.ok)
+        logger.w(
+          `[${videoId}] Failed to download video, will attempt captions-only processing:`,
+          videoPath.error,
+        )
 
-      logger.i(`[${videoId}] Extracting ${Math.floor(duration ?? 0)} frames...`)
-      const framesDir = join(videoDir, "frames")
-      await extractFramesFromVideo({ videoPath, outDir: framesDir, fps: 1 })
-
-      logger.i(`[${videoId}] Describing frames...`)
-      const framesDescription = await describeVideoFrames({ framesDir })
-      const framesDescriptionString = JSON.stringify(framesDescription, null, 2)
-      const framesDescriptionPath = join(videoDir, "frames-description.json")
-      await Deno.writeTextFile(framesDescriptionPath, framesDescriptionString)
-
-      logger.i(`[${videoId}] Extracting audio track...`)
-      const audioPath = join(videoDir, "audio.mp3")
-      await extractAudioFromVideo({ inputVideoPath: videoPath, outputAudioPath: audioPath })
-
-      logger.i(`[${videoId}] Transcribing audio track...`)
-      const { segments } = await transcribeAudio(audioPath)
-      const audioTranscriptionString = JSON.stringify(segments, null, 2)
-      const transcriptionPath = join(videoDir, "transcription.json")
-      await Deno.writeTextFile(transcriptionPath, audioTranscriptionString)
-
-      logger.i(`[${videoId}] Putting it all together...`)
-      if (!captionsPath) logger.w(`[${videoId}] Captions not available`)
-      const description = await describeVideo({
-        captions: captionsPath ? await Deno.readTextFile(captionsPath) : "",
-        transcription: audioTranscriptionString,
-        description: framesDescriptionString,
-        promptAppendix: `
-      Cooking video specialization:
-      When generating the description, make sure to include all relevant cooking-related information that appears in the video. This includes:
-      - Cooking techniques and methods
-      - Ingredients and their quantities
-      - Timings, durations, and temperatures
-      - Tools, utensils, and equipment used
-      - Key visual cues related to food preparation, presentation, or changes in the dish
-      `,
+      // Download captions
+      const captionsPath = await youtube.downloadVideoCaptions({
+        videoUrlOrId: videoId,
+        outDir: videoDir,
       })
-      const descriptionPath = join(videoDir, "description.txt")
-      await Deno.writeTextFile(descriptionPath, description)
 
+      let framesDescriptionContent = ""
+      let transcriptionContent = ""
+      let captionsContent = ""
+
+      // Visual branch (requires video)
+      if (videoPath.ok) {
+        const duration = await tryCatch(getVideoDuration(videoPath.value))
+        if (!duration.ok)
+          logger.w(`[${videoId}] Failed to get video duration:`, duration.error.message)
+        else logger.i(`[${videoId}] Video duration: ${Math.floor(duration.value ?? 0)}s`)
+
+        const fps = duration.ok && duration.value != null ? getFramesPerSecond(duration.value) : 1
+        logger.i(`[${videoId}] Extracting frames at ${fps} fps...`)
+        const framesDir = join(videoDir, "frames")
+        const framesRes = await tryCatch(
+          extractFramesFromVideo({ videoPath: videoPath.value, outDir: framesDir, fps }),
+        )
+
+        if (!framesRes.ok) {
+          logger.w(`[${videoId}] Failed to extract video frames:`, framesRes.error.message)
+        } else {
+          logger.i(`[${videoId}] Describing frames...`)
+          const framesDescription = await tryCatch(describeVideoFrames({ framesDir }))
+          if (!framesDescription.ok) {
+            logger.w(
+              `[${videoId}] Failed to describe video frames:`,
+              framesDescription.error.message,
+            )
+          } else {
+            const { description, failedBatches, totalBatches } = framesDescription.value
+
+            // Fail only if half or more of the batches failed
+            if (failedBatches.length > 0 && failedBatches.length >= totalBatches / 2) {
+              logger.e(
+                `[${videoId}] Half or more of the frame description batches failed (${failedBatches.length}/${totalBatches}). Skipping frames description.`,
+              )
+            } else {
+              if (failedBatches.length > 0) {
+                logger.w(
+                  `[${videoId}] Ignoring ${failedBatches.length} of ${totalBatches} failed frame description batches`,
+                  failedBatches.map((b) => b.reason),
+                )
+              }
+              framesDescriptionContent = JSON.stringify(description, null, 2)
+              await Deno.writeTextFile(
+                join(videoDir, "frames-description.json"),
+                framesDescriptionContent,
+              ).catch((e) => logger.w(`[${videoId}] Failed to save frames description`, e))
+            }
+          }
+        }
+      }
+
+      // Audio branch (requires video)
+      if (videoPath.ok) {
+        logger.i(`[${videoId}] Extracting audio track...`)
+        const audioPath = join(videoDir, "audio.mp3")
+        const audioRes = await tryCatch(
+          extractAudioFromVideo({ inputVideoPath: videoPath.value, outputAudioPath: audioPath }),
+        )
+        if (!audioRes.ok) {
+          logger.w(`[${videoId}] Failed to extract audio:`, audioRes.error.message)
+        } else {
+          logger.i(`[${videoId}] Transcribing audio track...`)
+          const transcriptionRes = await tryCatch(() => transcribeAudio(audioPath))
+          if (!transcriptionRes.ok) {
+            logger.w(`[${videoId}] Failed to transcribe audio:`, transcriptionRes.error.message)
+          } else {
+            transcriptionContent = JSON.stringify(transcriptionRes.value.segments, null, 2)
+            await Deno.writeTextFile(
+              join(videoDir, "transcription.json"),
+              transcriptionContent,
+            ).catch((e) => logger.w(`[${videoId}] Failed to save transcription`, e))
+          }
+        }
+      }
+
+      // Captions branch (independent, no video needed)
+      if (captionsPath) {
+        const captionsRes = await tryCatch(Deno.readTextFile(captionsPath))
+        if (captionsRes.ok) captionsContent = captionsRes.value
+        else logger.w(`[${videoId}] Failed to read captions from file:`, captionsRes.error.message)
+      } else {
+        logger.w(`[${videoId}] Captions not available`)
+      }
+
+      // If all data sources are empty, bail out early
+      if (!captionsContent && !transcriptionContent && !framesDescriptionContent) {
+        logger.w(
+          `[${videoId}] No data sources available (no captions, transcription, or frames). Skipping recipe extraction.`,
+        )
+        return []
+      }
+
+      // Combine all sources into a video description
+      logger.i(`[${videoId}] Putting it all together...`)
+      const description = await tryCatch(
+        describeVideo({
+          captions: captionsContent,
+          transcription: transcriptionContent,
+          description: framesDescriptionContent,
+          promptAppendix: `
+          Cooking video specialization:
+          When generating the description, make sure to include all relevant cooking-related information that appears in the video. This includes:
+          - Cooking techniques and methods
+          - Ingredients and their quantities
+          - Timings, durations, and temperatures
+          - Tools, utensils, and equipment used
+          - Key visual cues related to food preparation, presentation, or changes in the dish
+          `,
+        }),
+      )
+
+      if (!description.ok) {
+        logger.e(`[${videoId}] Failed to generate video description:`, description.error.message)
+        return []
+      } else if (!description.value) {
+        logger.e(`[${videoId}] Video description was empty. Skipping recipe extraction.`)
+        return []
+      }
+
+      await Deno.writeTextFile(join(videoDir, "description.txt"), description.value).catch((e) =>
+        logger.w(`[${videoId}] Failed to save description`, e),
+      )
+
+      // Extract structured recipe from description
       logger.i(`[${videoId}] Extracting formatted recipe...`)
-      const recipe = await extractRecipe(container, description)
+      const recipes = await tryCatch(extractRecipes(description.value))
+      if (!recipes.ok) {
+        logger.e(`[${videoId}] Failed to extract recipe:`, recipes.error.message)
+        return []
+      }
 
+      // Fetch additional metadata
       logger.i(`[${videoId}] Fetching detailed metadata...`)
-      const metadata = await youtube.fetchDetailedMetadata({ videoUrlOrId })
+      const metadata = await youtube.fetchDetailedMetadata({ videoUrlOrId: videoId })
 
-      const recipesWithMetadata = recipe.result.map((r) => ({
-        ...r,
-        language: metadata.language as string | undefined,
-        location: metadata.location as string | undefined,
-        modelConfidence: recipe.confidence,
-      }))
+      // Assemble final results
+      const recipesWithMetadata: ExtractedRecipeWithMetadata[] = recipes.value.result.map(
+        (r, i) => ({
+          ...r,
+          source: source.url,
+          index: i,
+          language: metadata?.language as string | undefined,
+          location: metadata?.location as string | undefined,
+          modelConfidence: recipes.value.confidence,
+          plainTextDescription: description.value,
+        }),
+      )
 
-      const recipePath = join(videoDir, "recipe.json")
-      await Deno.writeTextFile(recipePath, JSON.stringify(recipesWithMetadata, null, 2))
-      logger.i(`[${videoId}] Result saved to ${recipePath}`)
+      await Deno.writeTextFile(
+        join(videoDir, "recipe.json"),
+        JSON.stringify(recipesWithMetadata, null, 2),
+      ).catch((e) => logger.w(`[${videoId}] Failed to save recipe`, e))
 
+      logger.i(`[${videoId}] Extracted ${recipesWithMetadata.length} recipe(s)`)
       return recipesWithMetadata
     },
 
@@ -293,6 +431,6 @@ export const createYoutubeAdapter = (container: Container) => {
         return null
       }
     },
-  }
+  } satisfies SourceAdapter
   return youtube
 }

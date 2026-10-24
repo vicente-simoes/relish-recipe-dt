@@ -1,5 +1,5 @@
 import { Command } from "@cliffy/command"
-import { cleanupTmpDir } from "@relish/storage"
+import { cleanupTmpDir, db } from "@relish/storage"
 import { toEmbedding } from "@relish/utils/ai"
 import {
   describeVideo,
@@ -11,9 +11,6 @@ import {
 } from "@relish/utils/video"
 import { Spinner } from "@std/cli/unstable-spinner"
 import * as c from "@std/fmt/colors"
-import { container } from "~/cli.container.ts"
-
-const { db } = container
 
 const getVideoDurationCommand = new Command()
   .name("get-duration")
@@ -88,13 +85,13 @@ const describeVideoFramesCommand = new Command()
   .action(async ({ outfile }, framesDir) => {
     const spinner = new Spinner({ message: "Describing video...", color: "blue" })
     spinner.start()
-    const res = await describeVideoFrames({ framesDir })
+    const { description } = await describeVideoFrames({ framesDir })
     spinner.stop()
     if (outfile) {
-      await Deno.writeTextFile(outfile, JSON.stringify(res, null, 2))
+      await Deno.writeTextFile(outfile, JSON.stringify(description, null, 2))
       console.log(`${c.green("✓")} Results saved to ${outfile}`)
     } else {
-      console.dir(res)
+      console.dir(description)
       console.log(`${c.green("✓")} Done`)
     }
   })

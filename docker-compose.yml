@@ -1,15 +1,16 @@
 services:
-  relish:
+  relish-api:
     build: .
     image: relish:latest
-    container_name: relish
+    container_name: relish-api
     env_file:
       - .env
-    # The container's database URL must use the MongoDB container name
     environment:
       - DATABASE_URL=mongodb://admin:${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD}@relish-mongod:27017/relish?authSource=admin&directConnection=true
+      - REDIS_URL=redis://relish-redis:6379
+    command: ["deno", "task", "server:start"]
     ports:
-      - "80:8000"
+      - "8000:8000"
     volumes:
       - relish_tmp_data:/app/tmp
     networks:
@@ -17,29 +18,63 @@ services:
     depends_on:
       relish-db-push:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 1m
+    # TODO: add health endpoint
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 20s
+
+  relish-worker:
+    build: .
+    image: relish:latest
+    container_name: relish-worker
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=mongodb://admin:${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD}@relish-mongod:27017/relish?authSource=admin&directConnection=true
+      - REDIS_URL=redis://relish-redis:6379
+    command: ["deno", "task", "worker:start"]
+    volumes:
+      - relish_tmp_data:/app/tmp
+    networks:
+      - relish-net
+    depends_on:
+      relish-db-push:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 2m
 
   mongod:
-    image: mongodb/mongodb-community-server:latest
+    image: mongodb/mongodb-community-server:8.2.2-ubi8
     container_name: relish-mongod
     environment:
       MONGODB_INITDB_ROOT_USERNAME: admin
       MONGODB_INITDB_ROOT_PASSWORD: ${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD}
       MONGOT_PASSWORD: ${MONGOT_PASSWORD:?Missing MONGOT_PASSWORD}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Missing ADMIN_PASSWORD}
-    command: >-
-      mongod
-      --config /etc/mongod.conf
-      --replSetMember=mongod.relish-net:27017
+    user: root
+    entrypoint: /docker-entrypoint-wrapper.sh
+    command: mongod --config /etc/mongod.conf --replSetMember=mongod.relish-net:27017
     ports:
       - "27017:27017"
     volumes:
       - mongod_data:/data/db
       - mongod_configdb:/data/configdb
       - ./mongo-config/mongod.conf:/etc/mongod.conf:ro
-      - ./keyfile:/keyfile:ro
+      - ./keyfile:/keyfile-src:ro
       - ./mongo-config/init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+      - ./mongo-config/docker-entrypoint-wrapper.sh:/docker-entrypoint-wrapper.sh:ro
     networks:
       - relish-net
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -48,7 +83,7 @@ services:
       start_period: 30s
 
   mongot:
-    image: mongodb/mongodb-community-search:latest
+    image: mongodb/mongodb-community-search:0.55.0
     container_name: relish-mongot
     ports:
       - "27028:27028" # gRPC server port
@@ -63,6 +98,7 @@ services:
     depends_on:
       mongod:
         condition: service_healthy
+    restart: unless-stopped
     healthcheck:
       test:
         [
@@ -99,7 +135,7 @@ services:
           echo 'Generating keyfile...';
           apk add --no-cache openssl;
           openssl rand -base64 756 > keyfile;
-          chmod 400 keyfile;
+          chmod 644 keyfile;
           echo 'Keyfile generated successfully';
         else
           echo 'Keyfile already exists, skipping generation';
@@ -139,11 +175,29 @@ services:
         condition: service_healthy
     restart: "no"
 
+  redis:
+    image: redis:8-alpine
+    container_name: relish-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - relish-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   relish_tmp_data:
   mongod_data:
   mongod_configdb:
   mongot_data:
+  redis_data:
 
 networks:
   relish-net:

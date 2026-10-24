@@ -17,6 +17,8 @@ model Dish {
   id              String           @id @default(auto()) @map("_id") @db.ObjectId
   name            String           @unique
   nameEmbedding   Float[]
+  // Aliases to the dish name, useful to skip semantic search
+  nameAliases     String[]         @default([])
   description     String
   recipes         Recipe[]
   media           Media[]
@@ -40,22 +42,23 @@ model Recipe {
 }
 
 model RecipeInstance {
-  id               String              @id @default(auto()) @map("_id") @db.ObjectId
-  dishId           String              @db.ObjectId
-  dish             Dish                @relation(fields: [dishId], references: [id])
-  ingredients      UserIngredientRef[]
-  tools            ToolRef[]
-  steps            UserStep[]
-  totalPrepSeconds Int?
-  sourceId         String              @db.ObjectId
-  source           ProcessedUrl        @relation(fields: [sourceId], references: [id])
-  index            Int
-  modelConfidence  Float
-  media            Media[]
-  location         Location
-  language         String // ISO 639
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  id                   String              @id @default(auto()) @map("_id") @db.ObjectId
+  dishId               String              @db.ObjectId
+  dish                 Dish                @relation(fields: [dishId], references: [id])
+  ingredients          UserIngredientRef[]
+  tools                ToolRef[]
+  steps                UserStep[]
+  totalPrepSeconds     Int?
+  sourceId             String              @db.ObjectId
+  source               ProcessedUrl        @relation(fields: [sourceId], references: [id])
+  index                Int
+  modelConfidence      Float
+  plainTextDescription String?
+  media                Media[]
+  location             Location?
+  language             String? // ISO 639
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 }
 
 type IngredientRef {
@@ -74,6 +77,8 @@ model Ingredient {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   name          String   @unique
   nameEmbedding Float[]
+  // Aliases to the ingredient name, useful to skip semantic search
+  nameAliases   String[] @default([])
   media         Media[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -102,6 +107,8 @@ model Tool {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   name          String   @unique
   nameEmbedding Float[]
+  // Aliases to the tool name, useful to skip semantic search
+  nameAliases   String[] @default([])
   media         Media[]
   createdAt     DateTime @default(now())
 }
@@ -126,7 +133,7 @@ model ProcessedUrl {
 }
 
 type SearchMetadata {
-  youtube String?
+  youtube Json?
 }
 
 enum MediaType {
@@ -159,29 +166,45 @@ enum AccessRule {
   READ
   UPDATE
   DELETE
-  TASKS
 }
 
 model Task {
   id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  status      TaskStatus
-  logs        LogEntry[]
+  type        TaskType
+  status      TaskStatus @default(PENDING)
+  logs        TaskLog[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   completedAt DateTime?
 }
 
-enum TaskStatus {
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELED
-}
-
-type LogEntry {
-  timestamp DateTime
+model TaskLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  taskId    String   @db.ObjectId
+  task      Task     @relation(fields: [taskId], references: [id])
+  // BullMQ job id; null when the entry was emitted by the parent job itself
+  jobId     String?
   type      LogType
   payload   String[]
+  timestamp DateTime @default(now())
+
+  @@index([taskId, timestamp])
+  @@index([taskId, jobId])
+}
+
+enum TaskType {
+  processAllDishes
+  processDish
+  processDishFromSource
+}
+
+enum TaskStatus {
+  PENDING // The task has been added to the queue, but no worker is processing it, yet
+  RUNNING // The task is being processed by a worker
+  COMPLETED // The task was completed successfully
+  COMPLETED_WITH_ERRORS // The task completed (i.e. reached the end) despite some errors
+  FAILED // The task failed with an error (i.e. crashed)
+  CANCELED // The task was canceled
 }
 
 enum LogType {
