@@ -3,13 +3,11 @@ import { env } from "@relish/env"
 import { evaluateRecipeLikelihood, extractRecipes } from "@relish/recipe-processing"
 import { TMP_DIR } from "@relish/storage"
 import { CommandError, executeCommand } from "@relish/utils/command"
+import { qwenVideoConfigFromEnv } from "@relish/utils/qwen-video"
 import { tryCatch } from "@relish/utils/try"
 import {
   describeVideo,
-  describeVideoFrames,
   extractAudioFromVideo,
-  extractFramesFromVideo,
-  getFramesPerSecond,
   getVideoDuration,
   transcribeAudio,
   vttToJson,
@@ -22,6 +20,7 @@ import {
   YoutubeSearchParametersSchema,
   type YoutubeSearchParameters,
 } from "./mod.ts"
+import { analyzeVideoVisuals } from "./visual-analysis.ts"
 
 // https://developers.google.com/youtube/v3/docs/search/list
 const BASE_URL = "https://www.googleapis.com/youtube/v3/search"
@@ -212,44 +211,39 @@ export const createYoutubeAdapter = () => {
           logger.w(`[${videoId}] Failed to get video duration:`, duration.error.message)
         else logger.i(`[${videoId}] Video duration: ${Math.floor(duration.value ?? 0)}s`)
 
-        const fps = duration.ok && duration.value != null ? getFramesPerSecond(duration.value) : 1
-        logger.i(`[${videoId}] Extracting frames at ${fps} fps...`)
-        const framesDir = join(videoDir, "frames")
-        const framesRes = await tryCatch(
-          extractFramesFromVideo({ videoPath: videoPath.value, outDir: framesDir, fps }),
-        )
+        // Describe video visuals with the configured backend
+        const framesDescription = await analyzeVideoVisuals({
+          backend: env.VIDEO_ANALYSIS_BACKEND,
+          videoId,
+          videoPath: videoPath.value,
+          videoDir,
+          durationSeconds: duration.ok ? duration.value : null,
+          qwen: qwenVideoConfigFromEnv(env),
+          logger,
+        })
 
-        if (!framesRes.ok) {
-          logger.w(`[${videoId}] Failed to extract video frames:`, framesRes.error.message)
-        } else {
-          logger.i(`[${videoId}] Describing frames...`)
-          const framesDescription = await tryCatch(describeVideoFrames({ framesDir }))
-          if (!framesDescription.ok) {
-            logger.w(
-              `[${videoId}] Failed to describe video frames:`,
-              framesDescription.error.message,
+        if (framesDescription && !framesDescription.ok) {
+          logger.w(`[${videoId}] Failed to describe video frames:`, framesDescription.error.message)
+        } else if (framesDescription) {
+          const { description, failedBatches, totalBatches } = framesDescription.value
+
+          // Fail only if half or more of the batches failed
+          if (failedBatches.length > 0 && failedBatches.length >= totalBatches / 2) {
+            logger.e(
+              `[${videoId}] Half or more of the frame description batches failed (${failedBatches.length}/${totalBatches}). Skipping frames description.`,
             )
           } else {
-            const { description, failedBatches, totalBatches } = framesDescription.value
-
-            // Fail only if half or more of the batches failed
-            if (failedBatches.length > 0 && failedBatches.length >= totalBatches / 2) {
-              logger.e(
-                `[${videoId}] Half or more of the frame description batches failed (${failedBatches.length}/${totalBatches}). Skipping frames description.`,
+            if (failedBatches.length > 0) {
+              logger.w(
+                `[${videoId}] Ignoring ${failedBatches.length} of ${totalBatches} failed frame description batches`,
+                failedBatches.map((b) => b.reason),
               )
-            } else {
-              if (failedBatches.length > 0) {
-                logger.w(
-                  `[${videoId}] Ignoring ${failedBatches.length} of ${totalBatches} failed frame description batches`,
-                  failedBatches.map((b) => b.reason),
-                )
-              }
-              framesDescriptionContent = JSON.stringify(description, null, 2)
-              await Deno.writeTextFile(
-                join(videoDir, "frames-description.json"),
-                framesDescriptionContent,
-              ).catch((e) => logger.w(`[${videoId}] Failed to save frames description`, e))
             }
+            framesDescriptionContent = JSON.stringify(description, null, 2)
+            await Deno.writeTextFile(
+              join(videoDir, "frames-description.json"),
+              framesDescriptionContent,
+            ).catch((e) => logger.w(`[${videoId}] Failed to save frames description`, e))
           }
         }
       }

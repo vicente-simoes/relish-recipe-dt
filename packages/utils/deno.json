@@ -5,6 +5,7 @@
     "./command": "./command.ts",
     "./di": "./di.ts",
     "./logger": "./logger.ts",
+    "./qwen-video": "./qwen-video.ts",
     "./try": "./try.ts",
     "./video": "./video.ts"
   },

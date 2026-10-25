@@ -248,7 +248,7 @@ Please follow these rules carefully:
 7. Only describe visible content that can be confirmed from the frames. Do not infer motivations, emotions, causes, or unseen actions. Describe only what can be visually confirmed in the frames.
 `
 
-const OutputSchema = z.array(
+export const OutputSchema = z.array(
   z.object({
     startSecond: z.number(),
     endSecond: z.number(),

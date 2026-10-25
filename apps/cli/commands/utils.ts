@@ -1,6 +1,12 @@
 import { Command } from "@cliffy/command"
+import { env } from "@relish/env"
 import { cleanupTmpDir, db } from "@relish/storage"
 import { toEmbedding } from "@relish/utils/ai"
+import {
+  describeVideoWithQwen,
+  QwenVideoAnalysisError,
+  qwenVideoConfigFromEnv,
+} from "@relish/utils/qwen-video"
 import {
   describeVideo,
   describeVideoFrames,
@@ -96,6 +102,60 @@ const describeVideoFramesCommand = new Command()
     }
   })
 
+const describeVideoQwenCommand = new Command()
+  .name("describe-video-qwen")
+  .description(
+    "Describe a video with the local Qwen3-VL server (native video input), using the QWEN_VL_* settings. The video must be inside the directory the server allows for local media (the repository's tmp/ directory by default).",
+  )
+  .option(
+    "-o, --outfile <value:string>",
+    "Path to save the output description as JSON with timestamps.",
+  )
+  .option(
+    "-d, --diagnostics <value:string>",
+    "Path to save the diagnostics (sampling, timing, token usage, retries, errors) as JSON.",
+  )
+  .option("--fps <value:number>", "Override QWEN_VL_FPS for this run.")
+  .arguments("<video-path:string>")
+  .action(async ({ outfile, diagnostics: diagnosticsFile, fps }, videoPath) => {
+    const durationSeconds = await getVideoDuration(videoPath)
+    const config = { ...qwenVideoConfigFromEnv(env), fps: fps ?? env.QWEN_VL_FPS }
+    const spinner = new Spinner({
+      message: `Describing video with ${config.model}...`,
+      color: "blue",
+    })
+    spinner.start()
+    try {
+      const { description, diagnostics } = await describeVideoWithQwen({
+        videoPath,
+        durationSeconds,
+        config,
+      })
+      spinner.stop()
+      if (diagnosticsFile) {
+        await Deno.writeTextFile(diagnosticsFile, JSON.stringify(diagnostics, null, 2))
+      }
+      if (outfile) {
+        await Deno.writeTextFile(outfile, JSON.stringify(description, null, 2))
+        console.log(`${c.green("✓")} Results saved to ${outfile}`)
+      } else {
+        console.dir(description, { depth: null })
+      }
+      const { sampling, usage } = diagnostics
+      console.log(
+        `${c.green("✓")} ${description.length} segments | ${sampling.numFrames ?? "?"} frames at ${sampling.requestedFps.toFixed(3)} fps (${sampling.fpsSource}, effective fps ${sampling.effectiveFps?.toFixed(3) ?? "n/a"}${sampling.capped ? ", capped" : ""}) | ${(diagnostics.elapsedMs / 1000).toFixed(1)}s | ${usage?.promptTokens ?? "?"} prompt + ${usage?.completionTokens ?? "?"} completion tokens | ${diagnostics.retries} retries`,
+      )
+    } catch (e) {
+      spinner.stop()
+      if (!(e instanceof QwenVideoAnalysisError)) throw e
+      if (diagnosticsFile) {
+        await Deno.writeTextFile(diagnosticsFile, JSON.stringify(e.diagnostics, null, 2))
+      }
+      console.error(`${c.red("✗")} ${e.message}`)
+      Deno.exitCode = 1
+    }
+  })
+
 const describeVideoCommand = new Command()
   .name("describe-video")
   .description(
@@ -132,6 +192,7 @@ const videoCommand = new Command()
   .command(extractVideoFramesCommand.getName(), extractVideoFramesCommand)
   .command(transcribeAudioCommand.getName(), transcribeAudioCommand)
   .command(describeVideoFramesCommand.getName(), describeVideoFramesCommand)
+  .command(describeVideoQwenCommand.getName(), describeVideoQwenCommand)
   .command(describeVideoCommand.getName(), describeVideoCommand)
 
 const healthcheckCommand = new Command()

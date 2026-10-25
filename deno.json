@@ -11,7 +11,8 @@
     "db:stop": "docker compose stop mongod mongot redis",
     "db:push": "cd packages/storage && deno run -A --env-file=../../.env ../../node_modules/.bin/prisma db push && deno run -A create-vector-indexes.ts",
     "db:generate": "cd packages/storage && prisma generate",
-    "check": "deno check -q; echo; deno lint -q"
+    "check": "deno check -q; echo; deno lint -q",
+    "qwen:serve": "bash scripts/serve-qwen3vl.sh"
   },
   "workspace": ["./apps/*", "./packages/*"],
   "nodeModulesDir": "auto",
