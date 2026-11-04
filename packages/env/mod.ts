@@ -32,6 +32,22 @@ const EnvSchema = z.object({
     emptyAsUndefined,
     z.coerce.number().int().positive().default(600_000),
   ),
+  TRANSCRIPTION_BACKEND: z.preprocess(
+    emptyAsUndefined,
+    z.enum(["openai", "local"]).default("openai"),
+  ),
+  LOCAL_ASR_BASE_URL: z.preprocess(
+    emptyAsUndefined,
+    z.url({ protocol: /^https?$/ }).default("http://127.0.0.1:8002/v1"),
+  ),
+  LOCAL_ASR_MODEL: z.preprocess(
+    emptyAsUndefined,
+    z.string().min(1).default("openai/whisper-large-v3"),
+  ),
+  LOCAL_ASR_TIMEOUT_MS: z.preprocess(
+    emptyAsUndefined,
+    z.coerce.number().int().positive().default(600_000),
+  ),
 })
 
 await load({ envPath: join(import.meta.dirname!, "../../", ".env"), export: true })

@@ -2,6 +2,7 @@ import { Command } from "@cliffy/command"
 import { env } from "@relish/env"
 import { cleanupTmpDir, db } from "@relish/storage"
 import { toEmbedding } from "@relish/utils/ai"
+import { localAsrConfigFromEnv } from "@relish/utils/local-asr"
 import {
   describeVideoWithQwen,
   QwenVideoAnalysisError,
@@ -54,7 +55,7 @@ const extractVideoFramesCommand = new Command()
 
 const transcribeAudioCommand = new Command()
   .name("transcribe-audio")
-  .description("Transcribe an audio track.")
+  .description("Transcribe an audio track with the backend set in TRANSCRIPTION_BACKEND.")
   .option("--outtext <value:string>", "Path to save the output transcription as plaintext.")
   .option(
     "--outjson <value:string>",
@@ -64,7 +65,12 @@ const transcribeAudioCommand = new Command()
   .action(async ({ outtext, outjson }, audioPath) => {
     const spinner = new Spinner({ message: "Transcribing audio...", color: "blue" })
     spinner.start()
-    const { text, segments } = await transcribeAudio(audioPath)
+    const local = env.TRANSCRIPTION_BACKEND === "local" ? localAsrConfigFromEnv(env) : undefined
+    const start = performance.now()
+    const { text, segments, language, durationInSeconds } = await transcribeAudio(audioPath, {
+      local,
+    })
+    const elapsedSeconds = (performance.now() - start) / 1000
     spinner.stop()
     if (outtext) {
       await Deno.writeTextFile(outtext, text)
@@ -75,7 +81,9 @@ const transcribeAudioCommand = new Command()
       console.log(`  Segments saved as JSON to ${outjson}`)
     }
     if (!outtext && !outjson) console.log(text, "\n")
-    console.log(`${c.green("✓")} Done`)
+    console.log(
+      `${c.green("✓")} ${local?.model ?? "whisper-1"} | ${segments.length} segments | language ${language ?? "?"} | ${durationInSeconds?.toFixed(1) ?? "?"}s of audio in ${elapsedSeconds.toFixed(1)}s`,
+    )
   })
 
 const describeVideoFramesCommand = new Command()

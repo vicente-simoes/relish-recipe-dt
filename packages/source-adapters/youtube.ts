@@ -4,6 +4,7 @@ import { evaluateRecipeLikelihood, extractRecipes } from "@relish/recipe-process
 import { TMP_DIR } from "@relish/storage"
 import { gpt4_1Mini, gpt4oMini, whisper1 } from "@relish/utils/ai"
 import { CommandError, executeCommand } from "@relish/utils/command"
+import { localAsrConfigFromEnv } from "@relish/utils/local-asr"
 import { createRunMetrics } from "@relish/utils/metrics"
 import { qwenVideoConfigFromEnv } from "@relish/utils/qwen-video"
 import { tryCatch } from "@relish/utils/try"
@@ -195,6 +196,8 @@ export const createYoutubeAdapter = () => {
           config: {
             videoAnalysisBackend: env.VIDEO_ANALYSIS_BACKEND,
             qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
+            transcriptionBackend: env.TRANSCRIPTION_BACKEND,
+            localAsr: localAsrConfigFromEnv(env),
           },
         },
         onSaveError: (e) => logger.w(`[${videoId}] Failed to save run metrics`, e),
@@ -217,8 +220,9 @@ export const createYoutubeAdapter = () => {
         const path = await youtube.downloadVideoCaptions({
           videoUrlOrId: videoId,
           outDir: videoDir,
+          onError: stage.fail,
         })
-        if (!path) stage.fail("No captions downloaded")
+        stage.set({ available: !!path })
         return path
       })
 
@@ -294,13 +298,20 @@ export const createYoutubeAdapter = () => {
         if (!audioRes.ok) {
           logger.w(`[${videoId}] Failed to extract audio:`, audioRes.error.message)
         } else {
-          logger.i(`[${videoId}] Transcribing audio track...`)
+          const local =
+            env.TRANSCRIPTION_BACKEND === "local" ? localAsrConfigFromEnv(env) : undefined
+          logger.i(
+            `[${videoId}] Transcribing audio track${local ? ` with local ${local.model} at ${local.baseUrl}` : ""}...`,
+          )
           const transcriptionRes = await tryCatch(() =>
             metrics.stage(
               "transcription",
-              { backend: "openai", model: whisper1.modelId },
+              { backend: env.TRANSCRIPTION_BACKEND, model: local?.model ?? whisper1.modelId },
               async (stage) => {
-                const res = await transcribeAudio(audioPath, { onResponse: stage.addResponse })
+                const res = await transcribeAudio(audioPath, {
+                  onResponse: stage.addResponse,
+                  local,
+                })
                 stage.set({
                   audioSeconds: res.durationInSeconds,
                   language: res.language,
@@ -456,7 +467,11 @@ export const createYoutubeAdapter = () => {
       return videoPath
     },
 
-    downloadVideoCaptions: async (params: { videoUrlOrId: string; outDir: string }) => {
+    downloadVideoCaptions: async (params: {
+      videoUrlOrId: string
+      outDir: string
+      onError?: (error: string) => void
+    }) => {
       const { url } = parseVideoUrlOrId(params.videoUrlOrId)
       try {
         await executeCommand(
@@ -473,6 +488,12 @@ export const createYoutubeAdapter = () => {
       } catch (e) {
         if (e instanceof CommandError) console.error(e, e.stderr)
         else console.error(e)
+        // Keep yt-dlp's ERROR lines (e.g. HTTP 429) to tell failures apart from missing captions
+        const errorLines =
+          e instanceof CommandError
+            ? e.stderr?.split("\n").filter((l) => l.startsWith("ERROR"))
+            : undefined
+        params.onError?.(errorLines?.length ? errorLines.join("\n") : String(e))
         return null
       }
       const captionsFile = Array.from(Deno.readDirSync(params.outDir)).find(

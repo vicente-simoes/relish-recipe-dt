@@ -1,5 +1,6 @@
 import { gpt4_1Mini, whisper1 } from "@relish/utils/ai"
 import { executeCommand } from "@relish/utils/command"
+import { transcribeWithLocalAsr, type LocalAsrConfig } from "@relish/utils/local-asr"
 import type { OnModelResponse } from "@relish/utils/metrics"
 import { ensureDir } from "@std/fs"
 import { join } from "@std/path"
@@ -188,10 +189,23 @@ export const vttToJson = (vtt: string) => {
 // Audio transcription
 // ---
 
+const roundSegments = (segments: { text: string; startSecond: number; endSecond: number }[]) =>
+  segments.map((segment) => ({
+    text: segment.text,
+    startSecond: Math.round(segment.startSecond),
+    endSecond: Math.round(segment.endSecond),
+  }))
+
+/** Transcribe with OpenAI Whisper, or with a local model if `local` is given */
 export const transcribeAudio = async (
   audioPath: string,
-  options?: { onResponse?: OnModelResponse },
+  options?: { onResponse?: OnModelResponse; local?: LocalAsrConfig },
 ) => {
+  if (options?.local) {
+    const res = await transcribeWithLocalAsr({ audioPath, config: options.local })
+    options.onResponse?.({ modelId: options.local.model })
+    return { ...res, segments: roundSegments(res.segments) }
+  }
   const { text, segments, language, durationInSeconds, responses } = await transcribe({
     model: whisper1,
     audio: await Deno.readFile(audioPath),
@@ -203,12 +217,7 @@ export const transcribeAudio = async (
     },
   })
   options?.onResponse?.({ modelId: responses[0]?.modelId ?? whisper1.modelId })
-  const formattedSegments = segments.map((segment) => ({
-    text: segment.text,
-    startSecond: Math.round(segment.startSecond),
-    endSecond: Math.round(segment.endSecond),
-  }))
-  return { text, segments: formattedSegments, language, durationInSeconds }
+  return { text, segments: roundSegments(segments), language, durationInSeconds }
 }
 
 // ---

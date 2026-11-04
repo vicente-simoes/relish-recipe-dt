@@ -12,7 +12,8 @@
     "db:push": "cd packages/storage && deno run -A --env-file=../../.env ../../node_modules/.bin/prisma db push && deno run -A create-vector-indexes.ts",
     "db:generate": "cd packages/storage && prisma generate",
     "check": "deno check -q; echo; deno lint -q",
-    "qwen:serve": "bash scripts/serve-qwen3vl.sh"
+    "qwen:serve": "bash scripts/serve-qwen3vl.sh",
+    "asr:serve": "bash scripts/serve-whisper.sh"
   },
   "workspace": ["./apps/*", "./packages/*"],
   "nodeModulesDir": "auto",

@@ -10,7 +10,7 @@ DISH_ID="${DISH_ID:-6add312c0799c9cb00fb650d}"
 # Pause between cases so the OpenAI tokens-per-minute window resets
 PAUSE_SECONDS="${PAUSE_SECONDS:-60}"
 VLLM_VENV="${VLLM_VENV:-$HOME/.venvs/relish-vllm}"
-VLLM_URLS="${VLLM_URLS:-${QWEN_VL_BASE_URL:-http://127.0.0.1:8001/v1}}"
+VLLM_URLS="${VLLM_URLS:-${QWEN_VL_BASE_URL:-http://127.0.0.1:8001/v1},${LOCAL_ASR_BASE_URL:-http://127.0.0.1:8002/v1}}"
 
 if [[ $# -lt 2 ]]; then
   echo "Usage: bash scripts/run-cases.sh <label> <case-id>..." >&2
