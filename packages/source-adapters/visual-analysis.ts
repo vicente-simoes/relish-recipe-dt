@@ -1,4 +1,5 @@
 import type { Logger } from "@relish/utils/logger"
+import type { StageRecorder } from "@relish/utils/metrics"
 import {
   describeVideoWithQwen,
   QwenVideoAnalysisError,
@@ -24,8 +25,9 @@ export const analyzeVideoVisuals = async (params: {
   durationSeconds: number | null
   qwen: QwenVideoConfig
   logger: Logger
+  stage: StageRecorder
 }): Promise<Result<DescribeVideoFramesResult> | null> => {
-  const { videoId, videoPath, videoDir, durationSeconds, logger } = params
+  const { videoId, videoPath, videoDir, durationSeconds, logger, stage } = params
 
   if (params.backend === "qwen3vl") {
     logger.i(
@@ -45,7 +47,31 @@ export const analyzeVideoVisuals = async (params: {
       JSON.stringify(diagnostics, null, 2),
     ).catch((e) => logger.w(`[${videoId}] Failed to save visual analysis diagnostics`, e))
 
+    if ("attempts" in diagnostics) {
+      const responses = diagnostics.attempts.filter(
+        (a) => a.outcome === "ok" || a.outcome === "invalid_output",
+      )
+      for (const a of responses) {
+        stage.addResponse({
+          modelId: diagnostics.model,
+          usage: a.usage && {
+            inputTokens: a.usage.promptTokens,
+            outputTokens: a.usage.completionTokens,
+            totalTokens: a.usage.totalTokens,
+          },
+          finishReason: a.finishReason ?? undefined,
+        })
+      }
+      stage.set({
+        frames: diagnostics.sampling.numFrames,
+        fps: diagnostics.sampling.effectiveFps,
+        retries: diagnostics.retries,
+        segments: diagnostics.segments,
+      })
+    }
+
     if (!res.ok) {
+      stage.fail(res.error.message)
       logger.e(
         `[${videoId}] Local Qwen3-VL visual analysis failed. Continuing without visual descriptions (no OpenAI fallback):`,
         res.error.message,
@@ -68,8 +94,22 @@ export const analyzeVideoVisuals = async (params: {
 
   if (!framesRes.ok) {
     logger.w(`[${videoId}] Failed to extract video frames:`, framesRes.error.message)
+    stage.fail(`Failed to extract video frames: ${framesRes.error.message}`)
     return null
   }
   logger.i(`[${videoId}] Describing frames...`)
-  return await tryCatch(describeVideoFrames({ framesDir }))
+  const res = await tryCatch(describeVideoFrames({ framesDir, onResponse: stage.addResponse }))
+  const frames = await Array.fromAsync(Deno.readDir(framesDir))
+    .then((f) => f.length)
+    .catch(() => null)
+  if (!res.ok) stage.fail(res.error.message)
+  else
+    stage.set({
+      frames,
+      fps,
+      batches: res.value.totalBatches,
+      failedBatches: res.value.failedBatches.length,
+      segments: res.value.description.length,
+    })
+  return res
 }

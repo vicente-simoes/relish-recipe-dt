@@ -2,7 +2,9 @@ import { getLogger } from "@relish/di"
 import { env } from "@relish/env"
 import { evaluateRecipeLikelihood, extractRecipes } from "@relish/recipe-processing"
 import { TMP_DIR } from "@relish/storage"
+import { gpt4_1Mini, gpt4oMini, whisper1 } from "@relish/utils/ai"
 import { CommandError, executeCommand } from "@relish/utils/command"
+import { createRunMetrics } from "@relish/utils/metrics"
 import { qwenVideoConfigFromEnv } from "@relish/utils/qwen-video"
 import { tryCatch } from "@relish/utils/try"
 import {
@@ -184,9 +186,25 @@ export const createYoutubeAdapter = () => {
 
       const videoDir = join(TMP_DIR, videoId)
 
+      // Per-stage timing, usage and outcome
+      const metrics = createRunMetrics({
+        path: join(videoDir, "run-metrics.json"),
+        info: {
+          videoId,
+          source: source.url,
+          config: {
+            videoAnalysisBackend: env.VIDEO_ANALYSIS_BACKEND,
+            qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
+          },
+        },
+        onSaveError: (e) => logger.w(`[${videoId}] Failed to save run metrics`, e),
+      })
+
       // Download video
       const videoPath = await tryCatch(
-        youtube.downloadVideo({ videoUrlOrId: videoId, outDir: videoDir }),
+        metrics.stage("download", { backend: "yt-dlp" }, () =>
+          youtube.downloadVideo({ videoUrlOrId: videoId, outDir: videoDir }),
+        ),
       )
       if (!videoPath.ok)
         logger.w(
@@ -195,9 +213,13 @@ export const createYoutubeAdapter = () => {
         )
 
       // Download captions
-      const captionsPath = await youtube.downloadVideoCaptions({
-        videoUrlOrId: videoId,
-        outDir: videoDir,
+      const captionsPath = await metrics.stage("captions", { backend: "yt-dlp" }, async (stage) => {
+        const path = await youtube.downloadVideoCaptions({
+          videoUrlOrId: videoId,
+          outDir: videoDir,
+        })
+        if (!path) stage.fail("No captions downloaded")
+        return path
       })
 
       let framesDescriptionContent = ""
@@ -210,17 +232,28 @@ export const createYoutubeAdapter = () => {
         if (!duration.ok)
           logger.w(`[${videoId}] Failed to get video duration:`, duration.error.message)
         else logger.i(`[${videoId}] Video duration: ${Math.floor(duration.value ?? 0)}s`)
+        await metrics.set({ videoDurationSeconds: duration.ok ? duration.value : null })
 
         // Describe video visuals with the configured backend
-        const framesDescription = await analyzeVideoVisuals({
-          backend: env.VIDEO_ANALYSIS_BACKEND,
-          videoId,
-          videoPath: videoPath.value,
-          videoDir,
-          durationSeconds: duration.ok ? duration.value : null,
-          qwen: qwenVideoConfigFromEnv(env),
-          logger,
-        })
+        const framesDescription = await metrics.stage(
+          "visual",
+          {
+            backend: env.VIDEO_ANALYSIS_BACKEND,
+            model:
+              env.VIDEO_ANALYSIS_BACKEND === "qwen3vl" ? env.QWEN_VL_MODEL : gpt4_1Mini.modelId,
+          },
+          (stage) =>
+            analyzeVideoVisuals({
+              backend: env.VIDEO_ANALYSIS_BACKEND,
+              videoId,
+              videoPath: videoPath.value,
+              videoDir,
+              durationSeconds: duration.ok ? duration.value : null,
+              qwen: qwenVideoConfigFromEnv(env),
+              logger,
+              stage,
+            }),
+        )
 
         if (framesDescription && !framesDescription.ok) {
           logger.w(`[${videoId}] Failed to describe video frames:`, framesDescription.error.message)
@@ -232,6 +265,7 @@ export const createYoutubeAdapter = () => {
             logger.e(
               `[${videoId}] Half or more of the frame description batches failed (${failedBatches.length}/${totalBatches}). Skipping frames description.`,
             )
+            await metrics.fail("visual", `${failedBatches.length}/${totalBatches} batches failed`)
           } else {
             if (failedBatches.length > 0) {
               logger.w(
@@ -253,13 +287,29 @@ export const createYoutubeAdapter = () => {
         logger.i(`[${videoId}] Extracting audio track...`)
         const audioPath = join(videoDir, "audio.mp3")
         const audioRes = await tryCatch(
-          extractAudioFromVideo({ inputVideoPath: videoPath.value, outputAudioPath: audioPath }),
+          metrics.stage("audio", { backend: "ffmpeg" }, () =>
+            extractAudioFromVideo({ inputVideoPath: videoPath.value, outputAudioPath: audioPath }),
+          ),
         )
         if (!audioRes.ok) {
           logger.w(`[${videoId}] Failed to extract audio:`, audioRes.error.message)
         } else {
           logger.i(`[${videoId}] Transcribing audio track...`)
-          const transcriptionRes = await tryCatch(() => transcribeAudio(audioPath))
+          const transcriptionRes = await tryCatch(() =>
+            metrics.stage(
+              "transcription",
+              { backend: "openai", model: whisper1.modelId },
+              async (stage) => {
+                const res = await transcribeAudio(audioPath, { onResponse: stage.addResponse })
+                stage.set({
+                  audioSeconds: res.durationInSeconds,
+                  language: res.language,
+                  segments: res.segments.length,
+                })
+                return res
+              },
+            ),
+          )
           if (!transcriptionRes.ok) {
             logger.w(`[${videoId}] Failed to transcribe audio:`, transcriptionRes.error.message)
           } else {
@@ -292,11 +342,19 @@ export const createYoutubeAdapter = () => {
       // Combine all sources into a video description
       logger.i(`[${videoId}] Putting it all together...`)
       const description = await tryCatch(
-        describeVideo({
-          captions: captionsContent,
-          transcription: transcriptionContent,
-          description: framesDescriptionContent,
-          promptAppendix: `
+        metrics.stage("fusion", { backend: "openai", model: gpt4_1Mini.modelId }, async (stage) => {
+          stage.set({
+            inputChars: {
+              captions: captionsContent.length,
+              transcription: transcriptionContent.length,
+              visual: framesDescriptionContent.length,
+            },
+          })
+          const text = await describeVideo({
+            captions: captionsContent,
+            transcription: transcriptionContent,
+            description: framesDescriptionContent,
+            promptAppendix: `
           Cooking video specialization:
           When generating the description, make sure to include all relevant cooking-related information that appears in the video. This includes:
           - Cooking techniques and methods
@@ -305,6 +363,10 @@ export const createYoutubeAdapter = () => {
           - Tools, utensils, and equipment used
           - Key visual cues related to food preparation, presentation, or changes in the dish
           `,
+            onResponse: stage.addResponse,
+          })
+          stage.set({ outputChars: text.length })
+          return text
         }),
       )
 
@@ -313,6 +375,7 @@ export const createYoutubeAdapter = () => {
         return []
       } else if (!description.value) {
         logger.e(`[${videoId}] Video description was empty. Skipping recipe extraction.`)
+        await metrics.fail("fusion", "Empty description")
         return []
       }
 
@@ -322,7 +385,17 @@ export const createYoutubeAdapter = () => {
 
       // Extract structured recipe from description
       logger.i(`[${videoId}] Extracting formatted recipe...`)
-      const recipes = await tryCatch(extractRecipes(description.value))
+      const recipes = await tryCatch(
+        metrics.stage(
+          "extraction",
+          { backend: "openai", model: gpt4oMini.modelId },
+          async (stage) => {
+            const res = await extractRecipes(description.value, { onResponse: stage.addResponse })
+            stage.set({ recipes: res.result.length, confidence: res.confidence })
+            return res
+          },
+        ),
+      )
       if (!recipes.ok) {
         logger.e(`[${videoId}] Failed to extract recipe:`, recipes.error.message)
         return []
@@ -330,7 +403,11 @@ export const createYoutubeAdapter = () => {
 
       // Fetch additional metadata
       logger.i(`[${videoId}] Fetching detailed metadata...`)
-      const metadata = await youtube.fetchDetailedMetadata({ videoUrlOrId: videoId })
+      const metadata = await metrics.stage("metadata", { backend: "yt-dlp" }, async (stage) => {
+        const res = await youtube.fetchDetailedMetadata({ videoUrlOrId: videoId })
+        if (!res) stage.fail("No metadata downloaded")
+        return res
+      })
 
       // Assemble final results
       const recipesWithMetadata: ExtractedRecipeWithMetadata[] = recipes.value.result.map(

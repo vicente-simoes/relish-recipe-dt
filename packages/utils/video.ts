@@ -1,5 +1,6 @@
 import { gpt4_1Mini, whisper1 } from "@relish/utils/ai"
 import { executeCommand } from "@relish/utils/command"
+import type { OnModelResponse } from "@relish/utils/metrics"
 import { ensureDir } from "@std/fs"
 import { join } from "@std/path"
 import { generateText, experimental_transcribe as transcribe } from "ai"
@@ -187,8 +188,11 @@ export const vttToJson = (vtt: string) => {
 // Audio transcription
 // ---
 
-export const transcribeAudio = async (audioPath: string) => {
-  const { text, segments } = await transcribe({
+export const transcribeAudio = async (
+  audioPath: string,
+  options?: { onResponse?: OnModelResponse },
+) => {
+  const { text, segments, language, durationInSeconds, responses } = await transcribe({
     model: whisper1,
     audio: await Deno.readFile(audioPath),
     providerOptions: {
@@ -198,12 +202,13 @@ export const transcribeAudio = async (audioPath: string) => {
       },
     },
   })
+  options?.onResponse?.({ modelId: responses[0]?.modelId ?? whisper1.modelId })
   const formattedSegments = segments.map((segment) => ({
     text: segment.text,
     startSecond: Math.round(segment.startSecond),
     endSecond: Math.round(segment.endSecond),
   }))
-  return { text, segments: formattedSegments }
+  return { text, segments: formattedSegments, language, durationInSeconds }
 }
 
 // ---
@@ -277,9 +282,10 @@ export type DescribeVideoFramesResult = {
 const MAX_FRAMES_PER_REQUEST = 10
 
 export const describeVideoFrames = async (
-  args:
+  args: (
     | { frames: { label: string; image: string | Uint8Array | ArrayBuffer | URL }[] }
-    | { framesDir: string },
+    | { framesDir: string }
+  ) & { onResponse?: OnModelResponse },
 ): Promise<DescribeVideoFramesResult> => {
   const frames =
     "frames" in args
@@ -300,7 +306,7 @@ export const describeVideoFrames = async (
   // Individual batch failures are reported in the result instead of throwing.
   const results = await Promise.allSettled(
     batches.map(async (batch) => {
-      const { text } = await generateText({
+      const { text, usage, finishReason, response } = await generateText({
         model: gpt4_1Mini,
         system: imageDescriptionPrompt,
         messages: [
@@ -313,6 +319,7 @@ export const describeVideoFrames = async (
           },
         ],
       })
+      args.onResponse?.({ modelId: response.modelId, usage, finishReason })
       return OutputSchema.parse(JSON.parse(text))
     }),
   )
@@ -370,8 +377,9 @@ export const describeVideo = async (args: {
   transcription: string
   description: string
   promptAppendix?: string
+  onResponse?: OnModelResponse
 }) => {
-  const { text } = await generateText({
+  const { text, usage, finishReason, response } = await generateText({
     model: gpt4_1Mini,
     system: args.promptAppendix
       ? `${videoDescriptionPrompt}\n\nAdditional instructions below.\n\n${args.promptAppendix}`
@@ -390,5 +398,6 @@ export const describeVideo = async (args: {
       },
     ],
   })
+  args.onResponse?.({ modelId: response.modelId, usage, finishReason })
   return text
 }

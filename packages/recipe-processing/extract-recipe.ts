@@ -1,4 +1,5 @@
 import { gpt4oMini } from "@relish/utils/ai"
+import type { OnModelResponse } from "@relish/utils/metrics"
 import { generateObject } from "ai"
 import { z } from "zod"
 
@@ -44,8 +45,13 @@ const InitialRecipeSchema = z.object({
 
 export type ExtractedRecipe = Awaited<ReturnType<typeof extractRecipes>>["result"][number]
 
-export async function extractRecipes(text: string) {
-  const { object: initialRecipes } = await generateObject({
+export async function extractRecipes(text: string, options?: { onResponse?: OnModelResponse }) {
+  const {
+    object: initialRecipes,
+    usage,
+    finishReason,
+    response,
+  } = await generateObject({
     model: gpt4oMini,
     system: extractionPrompt,
     schema: z.object({
@@ -54,5 +60,6 @@ export async function extractRecipes(text: string) {
     }),
     prompt: text,
   })
+  options?.onResponse?.({ modelId: response.modelId, usage, finishReason })
   return initialRecipes
 }
