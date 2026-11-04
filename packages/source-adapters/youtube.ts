@@ -5,6 +5,7 @@ import { TMP_DIR } from "@relish/storage"
 import { gpt4_1Mini, gpt4oMini, whisper1 } from "@relish/utils/ai"
 import { CommandError, executeCommand } from "@relish/utils/command"
 import { localAsrConfigFromEnv } from "@relish/utils/local-asr"
+import { createLocalLlm, localLlmConfigFromEnv } from "@relish/utils/local-llm"
 import { createRunMetrics } from "@relish/utils/metrics"
 import { qwenVideoConfigFromEnv } from "@relish/utils/qwen-video"
 import { tryCatch } from "@relish/utils/try"
@@ -198,6 +199,9 @@ export const createYoutubeAdapter = () => {
             qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
             transcriptionBackend: env.TRANSCRIPTION_BACKEND,
             localAsr: localAsrConfigFromEnv(env),
+            fusionBackend: env.FUSION_BACKEND,
+            extractionBackend: env.EXTRACTION_BACKEND,
+            localLlm: localLlmConfigFromEnv(env),
           },
         },
         onSaveError: (e) => logger.w(`[${videoId}] Failed to save run metrics`, e),
@@ -350,10 +354,16 @@ export const createYoutubeAdapter = () => {
         return []
       }
 
+      // Fusion and extraction models
+      const localLlm = createLocalLlm(localLlmConfigFromEnv(env))
+      const fusionModel = env.FUSION_BACKEND === "local" ? localLlm : gpt4_1Mini
+      const extractionModel = env.EXTRACTION_BACKEND === "local" ? localLlm : gpt4oMini
+      const fusionStage = { backend: env.FUSION_BACKEND, model: fusionModel.modelId }
+
       // Combine all sources into a video description
-      logger.i(`[${videoId}] Putting it all together...`)
+      logger.i(`[${videoId}] Putting it all together with ${fusionModel.modelId}...`)
       const description = await tryCatch(
-        metrics.stage("fusion", { backend: "openai", model: gpt4_1Mini.modelId }, async (stage) => {
+        metrics.stage("fusion", fusionStage, async (stage) => {
           stage.set({
             inputChars: {
               captions: captionsContent.length,
@@ -374,6 +384,7 @@ export const createYoutubeAdapter = () => {
           - Tools, utensils, and equipment used
           - Key visual cues related to food preparation, presentation, or changes in the dish
           `,
+            model: fusionModel,
             onResponse: stage.addResponse,
           })
           stage.set({ outputChars: text.length })
@@ -395,13 +406,16 @@ export const createYoutubeAdapter = () => {
       )
 
       // Extract structured recipe from description
-      logger.i(`[${videoId}] Extracting formatted recipe...`)
+      logger.i(`[${videoId}] Extracting formatted recipe with ${extractionModel.modelId}...`)
       const recipes = await tryCatch(
         metrics.stage(
           "extraction",
-          { backend: "openai", model: gpt4oMini.modelId },
+          { backend: env.EXTRACTION_BACKEND, model: extractionModel.modelId },
           async (stage) => {
-            const res = await extractRecipes(description.value, { onResponse: stage.addResponse })
+            const res = await extractRecipes(description.value, {
+              model: extractionModel,
+              onResponse: stage.addResponse,
+            })
             stage.set({ recipes: res.result.length, confidence: res.confidence })
             return res
           },

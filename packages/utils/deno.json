@@ -5,6 +5,7 @@
     "./command": "./command.ts",
     "./di": "./di.ts",
     "./local-asr": "./local-asr.ts",
+    "./local-llm": "./local-llm.ts",
     "./logger": "./logger.ts",
     "./metrics": "./metrics.ts",
     "./qwen-video": "./qwen-video.ts",

@@ -4,7 +4,7 @@ import { transcribeWithLocalAsr, type LocalAsrConfig } from "@relish/utils/local
 import type { OnModelResponse } from "@relish/utils/metrics"
 import { ensureDir } from "@std/fs"
 import { join } from "@std/path"
-import { generateText, experimental_transcribe as transcribe } from "ai"
+import { generateText, type LanguageModel, experimental_transcribe as transcribe } from "ai"
 import sharp from "sharp"
 import { z } from "zod"
 
@@ -386,10 +386,12 @@ export const describeVideo = async (args: {
   transcription: string
   description: string
   promptAppendix?: string
+  /** Defaults to GPT-4.1 */
+  model?: LanguageModel
   onResponse?: OnModelResponse
 }) => {
   const { text, usage, finishReason, response } = await generateText({
-    model: gpt4_1Mini,
+    model: args.model ?? gpt4_1Mini,
     system: args.promptAppendix
       ? `${videoDescriptionPrompt}\n\nAdditional instructions below.\n\n${args.promptAppendix}`
       : videoDescriptionPrompt,

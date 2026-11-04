@@ -48,6 +48,17 @@ const EnvSchema = z.object({
     emptyAsUndefined,
     z.coerce.number().int().positive().default(600_000),
   ),
+  FUSION_BACKEND: z.preprocess(emptyAsUndefined, z.enum(["openai", "local"]).default("openai")),
+  EXTRACTION_BACKEND: z.preprocess(emptyAsUndefined, z.enum(["openai", "local"]).default("openai")),
+  LOCAL_LLM_BASE_URL: z.preprocess(
+    emptyAsUndefined,
+    z.url({ protocol: /^https?$/ }).default("http://127.0.0.1:8001/v1"),
+  ),
+  LOCAL_LLM_MODEL: z.preprocess(
+    emptyAsUndefined,
+    z.string().min(1).default("Qwen/Qwen3-VL-8B-Instruct"),
+  ),
+  LOCAL_LLM_TEMPERATURE: z.preprocess(emptyAsUndefined, z.coerce.number().min(0).default(0)),
 })
 
 await load({ envPath: join(import.meta.dirname!, "../../", ".env"), export: true })
