@@ -11,27 +11,33 @@ export type LocalLlmConfig = {
   /** Model served by vLLM */
   model: string
   temperature: number
+  /** Output cap, so a looping generation fails fast instead of filling the context */
+  maxTokens: number
 }
 
 export const localLlmConfigFromEnv = (env: {
   LOCAL_LLM_BASE_URL: string
   LOCAL_LLM_MODEL: string
   LOCAL_LLM_TEMPERATURE: number
+  LOCAL_LLM_MAX_TOKENS: number
 }): LocalLlmConfig => ({
   baseUrl: env.LOCAL_LLM_BASE_URL,
   model: env.LOCAL_LLM_MODEL,
   temperature: env.LOCAL_LLM_TEMPERATURE,
+  maxTokens: env.LOCAL_LLM_MAX_TOKENS,
 })
 
 // ---
 // Model
 // ---
 
-/** Language model served locally by vLLM through its Chat Completions API. Structured outputs use guided decoding */
+/** Model served by vLLM through its Chat Completions API. Structured outputs use guided decoding */
 export const createLocalLlm = (config: LocalLlmConfig) =>
   wrapLanguageModel({
     model: createOpenAI({ baseURL: config.baseUrl, apiKey: "local", name: "local" }).chat(
       config.model,
     ),
-    middleware: defaultSettingsMiddleware({ settings: { temperature: config.temperature } }),
+    middleware: defaultSettingsMiddleware({
+      settings: { temperature: config.temperature, maxOutputTokens: config.maxTokens },
+    }),
   })

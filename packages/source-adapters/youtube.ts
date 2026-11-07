@@ -17,6 +17,7 @@ import {
   vttToJson,
 } from "@relish/utils/video"
 import { join } from "@std/path"
+import { NoObjectGeneratedError } from "ai"
 import dayjs from "dayjs"
 import {
   ExtractedRecipeWithMetadata,
@@ -415,6 +416,23 @@ export const createYoutubeAdapter = () => {
             const res = await extractRecipes(description.value, {
               model: extractionModel,
               onResponse: stage.addResponse,
+            }).catch(async (e) => {
+              if (NoObjectGeneratedError.isInstance(e)) {
+                if (e.response) {
+                  stage.addResponse({
+                    modelId: e.response.modelId,
+                    usage: e.usage,
+                    finishReason: e.finishReason,
+                  })
+                }
+                // Keep the raw output to see why it was rejected
+                if (e.text) {
+                  await Deno.writeTextFile(join(videoDir, "extraction-raw.txt"), e.text).catch(
+                    (err) => logger.w(`[${videoId}] Failed to save raw extraction output`, err),
+                  )
+                }
+              }
+              throw e
             })
             stage.set({ recipes: res.result.length, confidence: res.confidence })
             return res

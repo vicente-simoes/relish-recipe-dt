@@ -59,6 +59,10 @@ const EnvSchema = z.object({
     z.string().min(1).default("Qwen/Qwen3-VL-8B-Instruct"),
   ),
   LOCAL_LLM_TEMPERATURE: z.preprocess(emptyAsUndefined, z.coerce.number().min(0).default(0)),
+  LOCAL_LLM_MAX_TOKENS: z.preprocess(
+    emptyAsUndefined,
+    z.coerce.number().int().positive().default(4096),
+  ),
 })
 
 await load({ envPath: join(import.meta.dirname!, "../../", ".env"), export: true })
