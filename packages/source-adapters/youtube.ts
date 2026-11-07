@@ -415,6 +415,7 @@ export const createYoutubeAdapter = () => {
           async (stage) => {
             const res = await extractRecipes(description.value, {
               model: extractionModel,
+              schemaInPrompt: env.EXTRACTION_BACKEND === "local",
               onResponse: stage.addResponse,
             }).catch(async (e) => {
               if (NoObjectGeneratedError.isInstance(e)) {

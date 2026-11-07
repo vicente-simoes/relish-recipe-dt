@@ -43,11 +43,21 @@ const InitialRecipeSchema = z.object({
   ),
 })
 
+const ExtractionSchema = z.object({
+  result: z.array(InitialRecipeSchema),
+  confidence: z.number().min(0).max(1).describe("Confidence level of the end result"),
+})
+
 export type ExtractedRecipe = Awaited<ReturnType<typeof extractRecipes>>["result"][number]
 
 export async function extractRecipes(
   text: string,
-  options?: { model?: LanguageModel; onResponse?: OnModelResponse },
+  options?: {
+    model?: LanguageModel
+    /** Local models only see the schema through guided decoding, so add it to the prompt */
+    schemaInPrompt?: boolean
+    onResponse?: OnModelResponse
+  },
 ) {
   const {
     object: initialRecipes,
@@ -56,11 +66,10 @@ export async function extractRecipes(
     response,
   } = await generateObject({
     model: options?.model ?? gpt4oMini,
-    system: extractionPrompt,
-    schema: z.object({
-      result: z.array(InitialRecipeSchema),
-      confidence: z.number().min(0).max(1).describe("Confidence level of the end result"),
-    }),
+    system: options?.schemaInPrompt
+      ? `${extractionPrompt}\nAnswer with a JSON object that follows this JSON schema:\n${JSON.stringify(z.toJSONSchema(ExtractionSchema))}\n`
+      : extractionPrompt,
+    schema: ExtractionSchema,
     prompt: text,
   })
   options?.onResponse?.({ modelId: response.modelId, usage, finishReason })
