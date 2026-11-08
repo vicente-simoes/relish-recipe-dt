@@ -6,7 +6,8 @@ VENV_DIR="${LOCAL_ASR_VENV:-$HOME/.venvs/relish-vllm}"
 MODEL="${LOCAL_ASR_MODEL:-openai/whisper-large-v3-turbo}"
 HOST="${LOCAL_ASR_HOST:-127.0.0.1}"
 PORT="${LOCAL_ASR_PORT:-8002}"
-GPU_MEMORY_UTILIZATION="${LOCAL_ASR_GPU_MEMORY_UTILIZATION:-0.10}"
+# Fixed KV cache size instead of a memory share, which vLLM miscomputes under WSL while Qwen is running
+KV_CACHE_MEMORY="${LOCAL_ASR_KV_CACHE_MEMORY:-1G}"
 
 if [[ ! -x "$VENV_DIR/bin/vllm" ]]; then
   echo "vLLM not found in $VENV_DIR" >&2
@@ -22,6 +23,6 @@ export VLLM_USE_FLASHINFER_SAMPLER="${VLLM_USE_FLASHINFER_SAMPLER:-0}"
 exec "$VENV_DIR/bin/vllm" serve "$MODEL" \
   --host "$HOST" \
   --port "$PORT" \
-  --gpu-memory-utilization "$GPU_MEMORY_UTILIZATION" \
+  --kv-cache-memory-bytes "$KV_CACHE_MEMORY" \
   --seed 0 \
   "$@"
