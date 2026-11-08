@@ -42,7 +42,7 @@ const EnvSchema = z.object({
   ),
   LOCAL_ASR_MODEL: z.preprocess(
     emptyAsUndefined,
-    z.string().min(1).default("openai/whisper-large-v3"),
+    z.string().min(1).default("openai/whisper-large-v3-turbo"),
   ),
   LOCAL_ASR_TIMEOUT_MS: z.preprocess(
     emptyAsUndefined,

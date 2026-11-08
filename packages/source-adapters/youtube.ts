@@ -1,6 +1,6 @@
 import { getLogger } from "@relish/di"
 import { env } from "@relish/env"
-import { evaluateRecipeLikelihood, extractRecipes } from "@relish/recipe-processing"
+import { evaluateRecipeLikelihood } from "@relish/recipe-processing"
 import { TMP_DIR } from "@relish/storage"
 import { gpt4_1Mini, gpt4oMini, whisper1 } from "@relish/utils/ai"
 import { CommandError, executeCommand } from "@relish/utils/command"
@@ -10,14 +10,13 @@ import { createRunMetrics } from "@relish/utils/metrics"
 import { qwenVideoConfigFromEnv } from "@relish/utils/qwen-video"
 import { tryCatch } from "@relish/utils/try"
 import {
-  describeVideo,
   extractAudioFromVideo,
   getVideoDuration,
   transcribeAudio,
   vttToJson,
 } from "@relish/utils/video"
-import { join } from "@std/path"
-import { NoObjectGeneratedError } from "ai"
+import { ensureDir } from "@std/fs"
+import { join, resolve } from "@std/path"
 import dayjs from "dayjs"
 import {
   ExtractedRecipeWithMetadata,
@@ -25,6 +24,7 @@ import {
   YoutubeSearchParametersSchema,
   type YoutubeSearchParameters,
 } from "./mod.ts"
+import { runExtraction, runFusion, type TextStageModel } from "./text-stages.ts"
 import { analyzeVideoVisuals } from "./visual-analysis.ts"
 
 // https://developers.google.com/youtube/v3/docs/search/list
@@ -119,6 +119,32 @@ const parseVideoUrlOrId = (videoURLOrID: string): { url: string; id: string } =>
   throw new Error(`Unable to extract a YouTube video ID from the given input: "${videoURLOrID}"`)
 }
 
+/** Configuration recorded in the run metrics */
+const runConfig = () => ({
+  videoAnalysisBackend: env.VIDEO_ANALYSIS_BACKEND,
+  qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
+  transcriptionBackend: env.TRANSCRIPTION_BACKEND,
+  localAsr: localAsrConfigFromEnv(env),
+  fusionBackend: env.FUSION_BACKEND,
+  extractionBackend: env.EXTRACTION_BACKEND,
+  localLlm: localLlmConfigFromEnv(env),
+})
+
+/** Fusion and extraction models selected by FUSION_BACKEND and EXTRACTION_BACKEND */
+const textStageModels = (): { fusion: TextStageModel; extraction: TextStageModel } => {
+  const localLlm = createLocalLlm(localLlmConfigFromEnv(env))
+  return {
+    fusion: {
+      backend: env.FUSION_BACKEND,
+      model: env.FUSION_BACKEND === "local" ? localLlm : gpt4_1Mini,
+    },
+    extraction: {
+      backend: env.EXTRACTION_BACKEND,
+      model: env.EXTRACTION_BACKEND === "local" ? localLlm : gpt4oMini,
+    },
+  }
+}
+
 export type YoutubeSourceAdapter = ReturnType<typeof createYoutubeAdapter>
 
 export const createYoutubeAdapter = () => {
@@ -192,19 +218,7 @@ export const createYoutubeAdapter = () => {
       // Per-stage timing, usage and outcome
       const metrics = createRunMetrics({
         path: join(videoDir, "run-metrics.json"),
-        info: {
-          videoId,
-          source: source.url,
-          config: {
-            videoAnalysisBackend: env.VIDEO_ANALYSIS_BACKEND,
-            qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
-            transcriptionBackend: env.TRANSCRIPTION_BACKEND,
-            localAsr: localAsrConfigFromEnv(env),
-            fusionBackend: env.FUSION_BACKEND,
-            extractionBackend: env.EXTRACTION_BACKEND,
-            localLlm: localLlmConfigFromEnv(env),
-          },
-        },
+        info: { videoId, source: source.url, config: runConfig() },
         onSaveError: (e) => logger.w(`[${videoId}] Failed to save run metrics`, e),
       })
 
@@ -355,41 +369,19 @@ export const createYoutubeAdapter = () => {
         return []
       }
 
-      // Fusion and extraction models
-      const localLlm = createLocalLlm(localLlmConfigFromEnv(env))
-      const fusionModel = env.FUSION_BACKEND === "local" ? localLlm : gpt4_1Mini
-      const extractionModel = env.EXTRACTION_BACKEND === "local" ? localLlm : gpt4oMini
-      const fusionStage = { backend: env.FUSION_BACKEND, model: fusionModel.modelId }
+      const models = textStageModels()
 
       // Combine all sources into a video description
-      logger.i(`[${videoId}] Putting it all together with ${fusionModel.modelId}...`)
+      logger.i(`[${videoId}] Putting it all together with ${models.fusion.model.modelId}...`)
       const description = await tryCatch(
-        metrics.stage("fusion", fusionStage, async (stage) => {
-          stage.set({
-            inputChars: {
-              captions: captionsContent.length,
-              transcription: transcriptionContent.length,
-              visual: framesDescriptionContent.length,
-            },
-          })
-          const text = await describeVideo({
+        runFusion({
+          metrics,
+          sources: {
             captions: captionsContent,
             transcription: transcriptionContent,
-            description: framesDescriptionContent,
-            promptAppendix: `
-          Cooking video specialization:
-          When generating the description, make sure to include all relevant cooking-related information that appears in the video. This includes:
-          - Cooking techniques and methods
-          - Ingredients and their quantities
-          - Timings, durations, and temperatures
-          - Tools, utensils, and equipment used
-          - Key visual cues related to food preparation, presentation, or changes in the dish
-          `,
-            model: fusionModel,
-            onResponse: stage.addResponse,
-          })
-          stage.set({ outputChars: text.length })
-          return text
+            visual: framesDescriptionContent,
+          },
+          fusion: models.fusion,
         }),
       )
 
@@ -407,38 +399,18 @@ export const createYoutubeAdapter = () => {
       )
 
       // Extract structured recipe from description
-      logger.i(`[${videoId}] Extracting formatted recipe with ${extractionModel.modelId}...`)
+      logger.i(
+        `[${videoId}] Extracting formatted recipe with ${models.extraction.model.modelId}...`,
+      )
       const recipes = await tryCatch(
-        metrics.stage(
-          "extraction",
-          { backend: env.EXTRACTION_BACKEND, model: extractionModel.modelId },
-          async (stage) => {
-            const res = await extractRecipes(description.value, {
-              model: extractionModel,
-              schemaInPrompt: env.EXTRACTION_BACKEND === "local",
-              onResponse: stage.addResponse,
-            }).catch(async (e) => {
-              if (NoObjectGeneratedError.isInstance(e)) {
-                if (e.response) {
-                  stage.addResponse({
-                    modelId: e.response.modelId,
-                    usage: e.usage,
-                    finishReason: e.finishReason,
-                  })
-                }
-                // Keep the raw output to see why it was rejected
-                if (e.text) {
-                  await Deno.writeTextFile(join(videoDir, "extraction-raw.txt"), e.text).catch(
-                    (err) => logger.w(`[${videoId}] Failed to save raw extraction output`, err),
-                  )
-                }
-              }
-              throw e
-            })
-            stage.set({ recipes: res.result.length, confidence: res.confidence })
-            return res
-          },
-        ),
+        runExtraction({
+          metrics,
+          description: description.value,
+          extraction: models.extraction,
+          outDir: videoDir,
+          logger,
+          logPrefix: `[${videoId}]`,
+        }),
       )
       if (!recipes.ok) {
         logger.e(`[${videoId}] Failed to extract recipe:`, recipes.error.message)
@@ -473,6 +445,70 @@ export const createYoutubeAdapter = () => {
 
       logger.i(`[${videoId}] Extracted ${recipesWithMetadata.length} recipe(s)`)
       return recipesWithMetadata
+    },
+
+    /** Re-run fusion and extraction, or extraction only, on the files saved by a previous run */
+    replayStages: async (params: {
+      artifactsDir: string
+      outDir: string
+      from: "fusion" | "extraction"
+    }) => {
+      const { artifactsDir, outDir, from } = params
+      await ensureDir(outDir)
+      const metrics = createRunMetrics({
+        path: join(outDir, "run-metrics.json"),
+        info: { replayOf: resolve(artifactsDir), from, config: runConfig() },
+        onSaveError: (e) => logger.w("Failed to save run metrics", e),
+      })
+      const models = textStageModels()
+
+      let description: string
+      if (from === "fusion") {
+        // Same inputs as the pipeline: the captions file as is, and the saved JSON files
+        const readIfExists = (name: string) =>
+          Deno.readTextFile(join(artifactsDir, name)).catch((e) => {
+            if (e instanceof Deno.errors.NotFound) return ""
+            throw e
+          })
+        const captionsFile = Array.from(Deno.readDirSync(artifactsDir)).find(
+          (f) => f.isFile && /\.(vtt)$/i.test(f.name),
+        )
+        const sources = {
+          captions: captionsFile ? await readIfExists(captionsFile.name) : "",
+          transcription: await readIfExists("transcription.json"),
+          visual: await readIfExists("frames-description.json"),
+        }
+        await metrics.set({ captionsFile: captionsFile?.name ?? null })
+
+        logger.i(`Replaying fusion with ${models.fusion.model.modelId}...`)
+        description = await runFusion({ metrics, sources, fusion: models.fusion })
+        if (!description) {
+          await metrics.fail("fusion", "Empty description")
+          throw new Error("Video description was empty")
+        }
+        await Deno.writeTextFile(join(outDir, "description.txt"), description)
+      } else {
+        description = await Deno.readTextFile(join(artifactsDir, "description.txt"))
+      }
+
+      logger.i(`Replaying extraction with ${models.extraction.model.modelId}...`)
+      const recipes = await runExtraction({
+        metrics,
+        description,
+        extraction: models.extraction,
+        outDir,
+        logger,
+        logPrefix: "[replay]",
+      })
+      const result = recipes.result.map((r, i) => ({
+        ...r,
+        index: i,
+        modelConfidence: recipes.confidence,
+        plainTextDescription: description,
+      }))
+      await Deno.writeTextFile(join(outDir, "recipe.json"), JSON.stringify(result, null, 2))
+      logger.i(`Extracted ${result.length} recipe(s)`)
+      return result
     },
 
     downloadVideo: async (params: {

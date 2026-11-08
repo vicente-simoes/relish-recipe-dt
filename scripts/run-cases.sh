@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Run benchmark cases through the CLI pipeline. Usage: bash scripts/run-cases.sh <label> <case-id>...
+# With REPLAY_FROM set (a path with {case}, e.g. ~/relish-runs/2026-10-26/{case}/qwen3vl/artifacts),
+# only fusion and extraction are re-run on the saved files (extraction only with REPLAY_STAGE=extraction).
 set -uo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -7,8 +9,11 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNS_DIR="${RUNS_DIR:-$HOME/relish-runs/$(date +%F)}"
 # Any existing dish works, process-source only checks that it exists
 DISH_ID="${DISH_ID:-6add312c0799c9cb00fb650d}"
-# Pause between cases so the OpenAI tokens-per-minute window resets
-PAUSE_SECONDS="${PAUSE_SECONDS:-60}"
+REPEAT="${REPEAT:-1}"
+REPLAY_FROM="${REPLAY_FROM:-}"
+REPLAY_STAGE="${REPLAY_STAGE:-fusion}"
+# Pause between runs so the OpenAI tokens-per-minute window resets
+if [[ -n $REPLAY_FROM ]]; then PAUSE_SECONDS="${PAUSE_SECONDS:-15}"; else PAUSE_SECONDS="${PAUSE_SECONDS:-60}"; fi
 VLLM_VENV="${VLLM_VENV:-$HOME/.venvs/relish-vllm}"
 VLLM_URLS="${VLLM_URLS:-${QWEN_VL_BASE_URL:-http://127.0.0.1:8001/v1},${LOCAL_ASR_BASE_URL:-http://127.0.0.1:8002/v1}}"
 
@@ -19,56 +24,79 @@ fi
 LABEL=$1
 shift
 
+FIRST=1
 for CASE in "$@"; do
   URL=$(python3 -c 'import json,sys; print(next(c["url"] for c in json.load(open(sys.argv[1])) if c["id"] == sys.argv[2]))' "$REPO_DIR/benchmark/dataset.json" "$CASE" 2>/dev/null) || {
     echo "Unknown case $CASE" >&2
     continue
   }
   VIDEO_ID=$(sed -E 's#.*(v=|shorts/)##' <<<"$URL")
-  if [[ -e $REPO_DIR/tmp/$VIDEO_ID ]]; then
-    echo "Skipping $CASE: $REPO_DIR/tmp/$VIDEO_ID already exists" >&2
-    continue
+  SRC=""
+  if [[ -n $REPLAY_FROM ]]; then
+    SRC=${REPLAY_FROM//\{case\}/$CASE}
+    if [[ ! -d $SRC ]]; then
+      echo "Skipping $CASE: $SRC not found" >&2
+      continue
+    fi
   fi
 
-  # Next free run number
-  N=1
-  while [[ -e $RUNS_DIR/$LABEL/$CASE/$N ]]; do N=$((N + 1)); done
-  OUT=$RUNS_DIR/$LABEL/$CASE/$N
-  mkdir -p "$OUT"
-  echo "=== $CASE run $N ($LABEL) $URL"
+  for ((R = 1; R <= REPEAT; R++)); do
+    if [[ -z $REPLAY_FROM && -e $REPO_DIR/tmp/$VIDEO_ID ]]; then
+      echo "Skipping $CASE: $REPO_DIR/tmp/$VIDEO_ID already exists" >&2
+      break
+    fi
+    [[ $FIRST == 1 ]] || sleep "$PAUSE_SECONDS"
+    FIRST=0
 
-  STARTED_AT=$(date -Iseconds)
-  nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used,power.draw,temperature.gpu \
-    --format=csv,nounits -lms 500 >"$OUT/gpu.csv" 2>/dev/null &
-  GPU_PID=$!
-  START=$(date +%s.%N)
-  (cd "$REPO_DIR" && NO_COLOR=1 deno task cli:start source-adapters youtube process-source "$DISH_ID" "$URL" --outfile "$OUT/recipes.json") 2>&1 |
-    while IFS= read -r line; do printf '%s %s\n' "$(date +%H:%M:%S.%3N)" "$line"; done | tee "$OUT/run.log"
-  END=$(date +%s.%N)
-  kill "$GPU_PID" 2>/dev/null
-  awk -v s="$START" -v e="$END" 'BEGIN { printf "elapsed_s=%.1f\n", e - s }' >"$OUT/time.txt"
-  [[ -e $REPO_DIR/tmp/$VIDEO_ID ]] && mv "$REPO_DIR/tmp/$VIDEO_ID" "$OUT/artifacts"
+    # Next free run number
+    N=1
+    while [[ -e $RUNS_DIR/$LABEL/$CASE/$N ]]; do N=$((N + 1)); done
+    OUT=$RUNS_DIR/$LABEL/$CASE/$N
+    mkdir -p "$OUT"
+    echo "=== $CASE run $N ($LABEL) ${SRC:-$URL}"
 
-  VIDEO_FILE=$(find "$OUT/artifacts" -maxdepth 1 -name 'video.*' 2>/dev/null | head -1)
-  VLLM_MODELS=""
-  for U in ${VLLM_URLS//,/ }; do
-    VLLM_MODELS+="$(curl -s --max-time 5 "$U/models" || true)"$'\n'
-  done
+    if [[ -n $REPLAY_FROM ]]; then
+      CMD=(source-adapters youtube replay "$SRC" "$OUT/artifacts" --from "$REPLAY_STAGE" --outfile "$OUT/recipes.json")
+    else
+      CMD=(source-adapters youtube process-source "$DISH_ID" "$URL" --outfile "$OUT/recipes.json")
+    fi
 
-  M_LABEL=$LABEL M_CASE=$CASE M_RUN=$N M_URL=$URL M_VIDEO_ID=$VIDEO_ID M_DISH_ID=$DISH_ID \
-    M_STARTED_AT=$STARTED_AT M_FINISHED_AT=$(date -Iseconds) \
-    M_ELAPSED=$(awk -v s="$START" -v e="$END" 'BEGIN { printf "%.1f", e - s }') \
-    M_COMMIT=$(git -C "$REPO_DIR" rev-parse HEAD) \
-    M_BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD) \
-    M_DIRTY=$(git -C "$REPO_DIR" status --porcelain --untracked-files=no) \
-    M_DENO=$(deno --version | head -1) \
-    M_YTDLP=$(yt-dlp --version) \
-    M_FFMPEG=$(ffmpeg -version | head -1) \
-    M_VLLM=$("$VLLM_VENV/bin/python" -c 'import importlib.metadata as m; print(m.version("vllm"))' 2>/dev/null) \
-    M_VLLM_MODELS=$VLLM_MODELS \
-    M_GPU=$(nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader 2>/dev/null) \
-    M_VIDEO=$([[ -n $VIDEO_FILE ]] && ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,avg_frame_rate:format=duration -of json "$VIDEO_FILE") \
-    python3 - "$OUT/manifest.json" <<'EOF'
+    STARTED_AT=$(date -Iseconds)
+    nvidia-smi --query-gpu=timestamp,utilization.gpu,memory.used,power.draw,temperature.gpu \
+      --format=csv,nounits -lms 500 >"$OUT/gpu.csv" 2>/dev/null &
+    GPU_PID=$!
+    START=$(date +%s.%N)
+    (cd "$REPO_DIR" && NO_COLOR=1 deno task cli:start "${CMD[@]}") 2>&1 |
+      while IFS= read -r line; do printf '%s %s\n' "$(date +%H:%M:%S.%3N)" "$line"; done | tee "$OUT/run.log"
+    END=$(date +%s.%N)
+    kill "$GPU_PID" 2>/dev/null
+    awk -v s="$START" -v e="$END" 'BEGIN { printf "elapsed_s=%.1f\n", e - s }' >"$OUT/time.txt"
+    [[ -z $REPLAY_FROM && -e $REPO_DIR/tmp/$VIDEO_ID ]] && mv "$REPO_DIR/tmp/$VIDEO_ID" "$OUT/artifacts"
+    # Code synced from the laptop without committing (see .sync-info.json)
+    [[ -e $REPO_DIR/.sync-diff.patch ]] && cp "$REPO_DIR/.sync-diff.patch" "$OUT/sync-diff.patch"
+
+    VIDEO_FILE=$(find "$OUT/artifacts" -maxdepth 1 -name 'video.*' 2>/dev/null | head -1)
+    VLLM_MODELS=""
+    for U in ${VLLM_URLS//,/ }; do
+      VLLM_MODELS+="$(curl -s --max-time 5 "$U/models" || true)"$'\n'
+    done
+
+    M_LABEL=$LABEL M_CASE=$CASE M_RUN=$N M_URL=$URL M_VIDEO_ID=$VIDEO_ID M_DISH_ID=$DISH_ID \
+      M_REPLAY_FROM=$SRC M_REPLAY_STAGE=$([[ -n $SRC ]] && echo "$REPLAY_STAGE") \
+      M_STARTED_AT=$STARTED_AT M_FINISHED_AT=$(date -Iseconds) \
+      M_ELAPSED=$(awk -v s="$START" -v e="$END" 'BEGIN { printf "%.1f", e - s }') \
+      M_COMMIT=$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null) \
+      M_BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null) \
+      M_DIRTY=$(git -C "$REPO_DIR" status --porcelain --untracked-files=no 2>/dev/null) \
+      M_SYNC=$(cat "$REPO_DIR/.sync-info.json" 2>/dev/null) \
+      M_DENO=$(deno --version | head -1) \
+      M_YTDLP=$(yt-dlp --version) \
+      M_FFMPEG=$(ffmpeg -version | head -1) \
+      M_VLLM=$("$VLLM_VENV/bin/python" -c 'import importlib.metadata as m; print(m.version("vllm"))' 2>/dev/null) \
+      M_VLLM_MODELS=$VLLM_MODELS \
+      M_GPU=$(nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader 2>/dev/null) \
+      M_VIDEO=$([[ -n $VIDEO_FILE ]] && ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,avg_frame_rate:format=duration -of json "$VIDEO_FILE") \
+      python3 - "$OUT/manifest.json" <<'EOF'
 import json, os, sys
 
 e = lambda k: os.environ.get(k) or None
@@ -86,6 +114,7 @@ manifest = {
     "url": e("M_URL"),
     "videoId": e("M_VIDEO_ID"),
     "dishId": e("M_DISH_ID"),
+    "replay": {"from": e("M_REPLAY_FROM"), "stage": e("M_REPLAY_STAGE")} if e("M_REPLAY_FROM") else None,
     "startedAt": e("M_STARTED_AT"),
     "finishedAt": e("M_FINISHED_AT"),
     "elapsedSeconds": float(e("M_ELAPSED")),
@@ -94,11 +123,13 @@ manifest = {
         "branch": e("M_BRANCH"),
         "dirtyFiles": (e("M_DIRTY") or "").splitlines(),
     },
+    # Set when the code was synced from the laptop instead of pulled; the diff is in sync-diff.patch
+    "sync": parse_json(e("M_SYNC")),
     # Values set in the shell; .env values and defaults are in artifacts/run-metrics.json
     "envOverrides": {
         k: v
         for k, v in sorted(os.environ.items())
-        if k.endswith("_BACKEND") or k.startswith(("QWEN_", "LOCAL_"))
+        if k.endswith("_BACKEND") or k.startswith(("QWEN_", "LOCAL_", "REPLAY_"))
     },
     "versions": {
         "deno": e("M_DENO"),
@@ -116,6 +147,6 @@ with open(sys.argv[1], "w") as f:
     json.dump(manifest, f, indent=2)
 EOF
 
-  cat "$OUT/time.txt"
-  [[ $CASE != "${!#}" ]] && sleep "$PAUSE_SECONDS"
+    cat "$OUT/time.txt"
+  done
 done

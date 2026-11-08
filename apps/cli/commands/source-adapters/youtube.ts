@@ -1,4 +1,4 @@
-import { Command } from "@cliffy/command"
+import { Command, EnumType } from "@cliffy/command"
 import { getAdapters } from "@relish/di"
 import { sdk } from "@relish/sdk"
 import { Spinner } from "@std/cli/unstable-spinner"
@@ -84,6 +84,26 @@ const fetchDetailedMetadataCommand = new Command()
     console.log(JSON.stringify(metadata, null, 2))
   })
 
+const replayCommand = new Command()
+  .name("replay")
+  .description(
+    "Re-run fusion and extraction, or extraction only, on the files saved by a previous run. FUSION_BACKEND, EXTRACTION_BACKEND and LOCAL_LLM_* apply.",
+  )
+  .type("stage", new EnumType(["fusion", "extraction"]))
+  .option("--from <stage:stage>", "First stage to re-run.", { default: "fusion" as const })
+  .option("--outfile <value:string>", "Path to save the output JSON file.")
+  .arguments("<artifacts-dir:string> <out-dir:string>")
+  .action(async ({ from, outfile }, artifactsDir, outDir) => {
+    const adapters = getAdapters()
+    const recipes = await adapters.youtube.replayStages({ artifactsDir, outDir, from })
+    if (outfile) {
+      await Deno.writeTextFile(outfile, JSON.stringify(recipes, null, 2))
+      console.log(`${c.green("✓")} Recipes saved to ${outfile}`)
+    } else {
+      console.log(`${c.green("✓")} Results saved to ${outDir}`)
+    }
+  })
+
 /* const fullPipelineCommand = new Command()
   .name("full-pipeline")
   .description("Run the full YouTube video pipeline.")
@@ -115,5 +135,6 @@ export const youtubeCommand = new Command()
   .command(downloadVideoCommand.getName(), downloadVideoCommand)
   .command(downloadVideoCaptionsCommand.getName(), downloadVideoCaptionsCommand)
   .command(fetchDetailedMetadataCommand.getName(), fetchDetailedMetadataCommand)
+  .command(replayCommand.getName(), replayCommand)
 // .command(fullPipelineCommand.getName(), fullPipelineCommand)
 // .command(videoPipelineCommand.getName(), videoPipelineCommand)

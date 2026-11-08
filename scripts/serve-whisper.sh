@@ -3,10 +3,10 @@
 set -euo pipefail
 
 VENV_DIR="${LOCAL_ASR_VENV:-$HOME/.venvs/relish-vllm}"
-MODEL="${LOCAL_ASR_MODEL:-openai/whisper-large-v3}"
+MODEL="${LOCAL_ASR_MODEL:-openai/whisper-large-v3-turbo}"
 HOST="${LOCAL_ASR_HOST:-127.0.0.1}"
 PORT="${LOCAL_ASR_PORT:-8002}"
-GPU_MEMORY_UTILIZATION="${LOCAL_ASR_GPU_MEMORY_UTILIZATION:-0.15}"
+GPU_MEMORY_UTILIZATION="${LOCAL_ASR_GPU_MEMORY_UTILIZATION:-0.10}"
 
 if [[ ! -x "$VENV_DIR/bin/vllm" ]]; then
   echo "vLLM not found in $VENV_DIR" >&2
