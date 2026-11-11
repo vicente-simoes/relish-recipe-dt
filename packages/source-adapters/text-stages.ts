@@ -1,7 +1,7 @@
 import { extractRecipes } from "@relish/recipe-processing"
 import type { Logger } from "@relish/utils/logger"
 import type { RunMetrics } from "@relish/utils/metrics"
-import { describeVideo } from "@relish/utils/video"
+import { describeVideo, vttToJson } from "@relish/utils/video"
 import { join } from "@std/path"
 import { NoObjectGeneratedError, type LanguageModel } from "ai"
 
@@ -29,21 +29,29 @@ export const runFusion = (params: {
   metrics: RunMetrics
   sources: { captions: string; transcription: string; visual: string }
   fusion: TextStageModel
+  captionsFormat: "vtt" | "json"
 }) => {
-  const { metrics, sources, fusion } = params
+  const { metrics, sources, fusion, captionsFormat } = params
+  // "json": deduplicated caption segments, like transcription.json, instead of the raw VTT
+  const captions =
+    captionsFormat === "json" && sources.captions
+      ? JSON.stringify(vttToJson(sources.captions), null, 2)
+      : sources.captions
   return metrics.stage(
     "fusion",
     { backend: fusion.backend, model: fusion.model.modelId },
     async (stage) => {
       stage.set({
+        captionsFormat,
         inputChars: {
-          captions: sources.captions.length,
+          captions: captions.length,
+          captionsRaw: sources.captions.length,
           transcription: sources.transcription.length,
           visual: sources.visual.length,
         },
       })
       const text = await describeVideo({
-        captions: sources.captions,
+        captions,
         transcription: sources.transcription,
         description: sources.visual,
         promptAppendix: cookingPromptAppendix,

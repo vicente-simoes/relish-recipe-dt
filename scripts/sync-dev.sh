@@ -37,7 +37,7 @@ rsync -a --delete --rsync-path="$RSYNC_PATH" \
   --exclude .git --exclude node_modules --exclude /tmp --exclude generated \
   --exclude bin --exclude dist --exclude .DS_Store \
   --include .env.example --exclude '*.env*' --exclude keyfile --exclude passwordFile --exclude pwfile \
-  --exclude CLAUDE.md --exclude '/benchmark/pilot-*' --exclude /.claude \
+  --exclude CLAUDE.md --exclude '/benchmark/pilot-*' --exclude /notes --exclude /.claude \
   --exclude /.sync-info.json --exclude /.sync-diff.patch \
   "$REPO_DIR/" "$HOST:$DEST/"
 rsync -a --rsync-path="$RSYNC_PATH" "$INFO_DIR/.sync-info.json" "$INFO_DIR/.sync-diff.patch" "$HOST:$DEST/"

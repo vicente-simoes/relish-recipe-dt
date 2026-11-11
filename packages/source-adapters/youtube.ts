@@ -121,6 +121,8 @@ const parseVideoUrlOrId = (videoURLOrID: string): { url: string; id: string } =>
 
 /** Configuration recorded in the run metrics */
 const runConfig = () => ({
+  videoResolutionLimit: env.VIDEO_RESOLUTION_LIMIT,
+  captionsFormat: env.CAPTIONS_FORMAT,
   videoAnalysisBackend: env.VIDEO_ANALYSIS_BACKEND,
   qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
   transcriptionBackend: env.TRANSCRIPTION_BACKEND,
@@ -129,6 +131,12 @@ const runConfig = () => ({
   extractionBackend: env.EXTRACTION_BACKEND,
   localLlm: localLlmConfigFromEnv(env),
 })
+
+// "short-side" sorts by the smaller dimension, so vertical Shorts get 480x854 instead of 240x426
+const downloadFormatArgs = () =>
+  env.VIDEO_RESOLUTION_LIMIT === "short-side"
+    ? ["-f", "bestvideo+bestaudio/best", "-S", "res:480"]
+    : ["-f", "bestvideo[height<=480]+bestaudio/best[height<=480]"]
 
 /** Fusion and extraction models selected by FUSION_BACKEND and EXTRACTION_BACKEND */
 const textStageModels = (): { fusion: TextStageModel; extraction: TextStageModel } => {
@@ -224,9 +232,10 @@ export const createYoutubeAdapter = () => {
 
       // Download video
       const videoPath = await tryCatch(
-        metrics.stage("download", { backend: "yt-dlp" }, () =>
-          youtube.downloadVideo({ videoUrlOrId: videoId, outDir: videoDir }),
-        ),
+        metrics.stage("download", { backend: "yt-dlp" }, (stage) => {
+          stage.set({ format: downloadFormatArgs().join(" ") })
+          return youtube.downloadVideo({ videoUrlOrId: videoId, outDir: videoDir })
+        }),
       )
       if (!videoPath.ok)
         logger.w(
@@ -382,6 +391,7 @@ export const createYoutubeAdapter = () => {
             visual: framesDescriptionContent,
           },
           fusion: models.fusion,
+          captionsFormat: env.CAPTIONS_FORMAT,
         }),
       )
 
@@ -481,7 +491,12 @@ export const createYoutubeAdapter = () => {
         await metrics.set({ captionsFile: captionsFile?.name ?? null })
 
         logger.i(`Replaying fusion with ${models.fusion.model.modelId}...`)
-        description = await runFusion({ metrics, sources, fusion: models.fusion })
+        description = await runFusion({
+          metrics,
+          sources,
+          fusion: models.fusion,
+          captionsFormat: env.CAPTIONS_FORMAT,
+        })
         if (!description) {
           await metrics.fail("fusion", "Empty description")
           throw new Error("Video description was empty")
@@ -521,8 +536,7 @@ export const createYoutubeAdapter = () => {
       // Download video
       await executeCommand(
         "yt-dlp",
-        "-f",
-        "bestvideo[height<=480]+bestaudio/best[height<=480]",
+        ...downloadFormatArgs(),
         url,
         "-o",
         videoPathWithGenericExtension,

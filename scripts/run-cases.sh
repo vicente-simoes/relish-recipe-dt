@@ -129,7 +129,7 @@ manifest = {
     "envOverrides": {
         k: v
         for k, v in sorted(os.environ.items())
-        if k.endswith("_BACKEND") or k.startswith(("QWEN_", "LOCAL_", "REPLAY_"))
+        if k.endswith("_BACKEND") or k.startswith(("QWEN_", "LOCAL_", "REPLAY_", "VIDEO_", "CAPTIONS_"))
     },
     "versions": {
         "deno": e("M_DENO"),
