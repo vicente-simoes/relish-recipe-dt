@@ -123,6 +123,7 @@ const parseVideoUrlOrId = (videoURLOrID: string): { url: string; id: string } =>
 const runConfig = () => ({
   videoResolutionLimit: env.VIDEO_RESOLUTION_LIMIT,
   captionsFormat: env.CAPTIONS_FORMAT,
+  captionsLanguage: env.CAPTIONS_LANGUAGE,
   videoAnalysisBackend: env.VIDEO_ANALYSIS_BACKEND,
   qwen: { ...qwenVideoConfigFromEnv(env), fps: env.QWEN_VL_FPS ?? null },
   transcriptionBackend: env.TRANSCRIPTION_BACKEND,
@@ -131,6 +132,30 @@ const runConfig = () => ({
   extractionBackend: env.EXTRACTION_BACKEND,
   localLlm: localLlmConfigFromEnv(env),
 })
+
+type CaptionsTrack = { language: string | null; track: string | null; manual?: boolean }
+
+/** Uploaded subtitles in the video's language, else YouTube's untranslated ASR track (`<lang>-orig`) */
+const pickOriginalCaptionsTrack = (metadata: {
+  language?: string | null
+  subtitles?: Record<string, unknown> | null
+  automatic_captions?: Record<string, unknown> | null
+}): (CaptionsTrack & { track: string; manual: boolean }) | null => {
+  const language = metadata.language ?? null
+  const base = language?.split("-")[0]
+  const manual = Object.keys(metadata.subtitles ?? {}).filter((k) => k !== "live_chat")
+  const auto = Object.keys(metadata.automatic_captions ?? {}).filter((k) => k.endsWith("-orig"))
+  const sameBase = (k: string) => k.replace(/-orig$/, "").split("-")[0] === base
+
+  const manualTrack = manual.find((k) => k === language) ?? manual.find(sameBase)
+  if (manualTrack) return { language, track: manualTrack, manual: true }
+  const autoTrack =
+    auto.find((k) => k === `${language}-orig`) ??
+    auto.find(sameBase) ??
+    (auto.length === 1 ? auto[0] : undefined)
+  if (autoTrack) return { language, track: autoTrack, manual: false }
+  return null
+}
 
 // "short-side" sorts by the smaller dimension, so vertical Shorts get 480x854 instead of 240x426
 const downloadFormatArgs = () =>
@@ -248,6 +273,8 @@ export const createYoutubeAdapter = () => {
         const path = await youtube.downloadVideoCaptions({
           videoUrlOrId: videoId,
           outDir: videoDir,
+          language: env.CAPTIONS_LANGUAGE,
+          onTrack: (track) => stage.set(track),
           onError: stage.fail,
         })
         stage.set({ available: !!path })
@@ -553,21 +580,25 @@ export const createYoutubeAdapter = () => {
     downloadVideoCaptions: async (params: {
       videoUrlOrId: string
       outDir: string
+      language?: "en" | "original"
+      onTrack?: (track: CaptionsTrack) => void
       onError?: (error: string) => void
     }) => {
       const { url } = parseVideoUrlOrId(params.videoUrlOrId)
+      let subArgs = ["--write-auto-sub", "--write-sub", "--sub-lang", "en,original"]
+      if (params.language === "original") {
+        const metadata = await youtube.fetchDetailedMetadata({ videoUrlOrId: url })
+        if (!metadata) {
+          params.onError?.("No metadata to pick the captions language")
+          return null
+        }
+        const track = pickOriginalCaptionsTrack(metadata)
+        params.onTrack?.(track ?? { language: metadata.language ?? null, track: null })
+        if (!track) return null
+        subArgs = [track.manual ? "--write-sub" : "--write-auto-sub", "--sub-lang", track.track]
+      }
       try {
-        await executeCommand(
-          "yt-dlp",
-          "--write-auto-sub",
-          "--write-sub",
-          "--sub-lang",
-          "en,original",
-          "--skip-download",
-          "-P",
-          params.outDir,
-          url,
-        )
+        await executeCommand("yt-dlp", ...subArgs, "--skip-download", "-P", params.outDir, url)
       } catch (e) {
         if (e instanceof CommandError) console.error(e, e.stderr)
         else console.error(e)

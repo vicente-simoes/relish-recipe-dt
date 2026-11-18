@@ -53,6 +53,7 @@ const EnvSchema = z.object({
     z.enum(["height", "short-side"]).default("height"),
   ),
   CAPTIONS_FORMAT: z.preprocess(emptyAsUndefined, z.enum(["vtt", "json"]).default("vtt")),
+  CAPTIONS_LANGUAGE: z.preprocess(emptyAsUndefined, z.enum(["en", "original"]).default("en")),
   FUSION_BACKEND: z.preprocess(emptyAsUndefined, z.enum(["openai", "local"]).default("openai")),
   EXTRACTION_BACKEND: z.preprocess(emptyAsUndefined, z.enum(["openai", "local"]).default("openai")),
   LOCAL_LLM_BASE_URL: z.preprocess(
